@@ -20,6 +20,7 @@ if (-not (Test-Path (Join-Path $ts 'icon.png'))) { & (Join-Path $ts 'make-icon.p
 
 & (Join-Path $root 'build.ps1') -GameDirectory $GameDirectory
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+$dll = Join-Path $root 'bin\Release\net6.0\BigChoppa.dll'
 
 $staging = Join-Path $root 'dist\staging'
 if (Test-Path $staging) { Remove-Item -Recurse -Force $staging }
@@ -28,7 +29,7 @@ New-Item -ItemType Directory -Force $staging | Out-Null
 foreach ($f in 'manifest.json', 'icon.png', 'README.md', 'CHANGELOG.md') {
     Copy-Item (Join-Path $ts $f) $staging
 }
-Copy-Item (Join-Path $GameDirectory 'BepInEx\plugins\BigChoppa\BigChoppa.dll') $staging
+Copy-Item $dll $staging
 
 $zip = Join-Path $root "dist\$Team-$($manifest.name)-$version.zip"
 if (Test-Path $zip) { Remove-Item -Force $zip }

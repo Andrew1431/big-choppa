@@ -66,3 +66,4 @@ Shared. Everyone in the lobby, host included, needs the mod (a host without it m
 - `ChoppaCrash.cs`: break-apart debris
 - `ChoppaAudio.cs`: synthesised rotor/motor loops and plastic bonks (no audio files)
 - `ChoppaBonker.cs`: plays a bonk when a piece (or a hard landing) hits something
+- `ChoppaLogbook.cs`: "Pilot's Logbook", anonymous PostHog events (opt-out via `[Pilot Logbook] Enabled`)

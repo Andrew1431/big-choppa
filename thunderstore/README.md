@@ -42,6 +42,38 @@ The pilot's game simulates the choppa and everyone else sees a smoothed copy and
 
 If the host doesn't have the mod, you may be kicked when you join. Set `Networking.Enabled = false` to keep choppas to yourself.
 
+## Pilot's Logbook (anonymous flight stats)
+
+The choppa keeps a tiny logbook and sends it to me, the author, purely because I'm curious how people fly it. It's sent through PostHog, an analytics service. It's anonymous and there's nothing personal in it.
+
+**What gets logged:**
+- You spawned a choppa
+- You got in, and whether as the pilot or a passenger
+- A flight ended (logged by the pilot), with:
+  - how long it lasted
+  - how far it went
+  - the highest it got
+  - its top speed
+  - its speed at the very end
+  - how many people were aboard
+  - how many barrel rolls and loops you pulled off
+  - how many seconds you spent upside down
+  - how much of the flight was in cockpit view versus chase view
+  - how it ended: *landed*, *bailed* (pilot hopped out mid-air) or *ended abruptly*
+- A passenger's ride ended: how long it lasted and how it ended (*got out*, *jumped out* or *ended abruptly*)
+- Someone jumped out mid-air: pilot or passenger, how high it was, and how fast it was going
+- Someone used the flip-upright key, and whether they were inside the choppa or outside it
+
+Each entry also carries the mod version and a random ID made up on your PC, so one person's flights can be told apart from another's.
+
+**What does NOT get logged:** your name, Steam ID, other players' names, chat, your location, your PC specs, or anything outside the choppa. The service is set to discard IP addresses.
+
+**Turning it off:** set `Enabled = false` under `[Pilot Logbook]` in the config:
+- **r2modman / Gale:** Config editor → `com.andrew1431.bigchoppa` → `Pilot Logbook` → `Enabled` → `false` → Save.
+- **Manual install:** open `BepInEx/config/com.andrew1431.bigchoppa.cfg` and change `Enabled = true` under `[Pilot Logbook]` to `Enabled = false`.
+
+With it off, nothing is sent at all.
+
 ## Source and bug reports
 
 https://github.com/Andrew1431/big-choppa

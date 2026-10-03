@@ -26,7 +26,13 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
 - `.\build.ps1 -InstallBepInEx` also copies the BepInEx loader + interop to the remote targets (first-time setup, or
   after a game update regenerates interop).
 - Default game path: `E:\SteamLibrary\steamapps\common\Big Walk` (`-GameDirectory` to override).
-- Logs: `<game>\BepInEx\LogOutput.log`; a remote target's log is readable at `<unc>\BepInEx\LogOutput.log`.
+- BepInEx location: the game folder's `BepInEx` if present, else the r2modman profile named **Dev**
+  (`%APPDATA%\r2modmanPlus-local\BigWalk\profiles\Dev\BepInEx`); `-BepInExDirectory` overrides. The **Default**
+  profile is the owner's "player" profile with the published Thunderstore version; never install dev builds there.
+  The Dev profile must NOT have the Thunderstore BigChoppa installed (same GUID, only one loads; the build warns).
+  To test a dev build, launch the game from r2modman with the Dev profile selected.
+- `package.ps1` zips the DLL from `bin\Release\net6.0`, not from the install folder.
+- Logs: `LogOutput.log` in whichever BepInEx folder the build used (currently the r2modman Dev profile); a remote target's log is readable at `<unc>\BepInEx\LogOutput.log`.
 - The interop folder only exists after launching the game once with BepInEx.
 - Config file: `BepInEx\config\com.andrew1431.bigchoppa.cfg`. **Changing a default in code doesn't change an
   existing .cfg**; edit the file too (on every test machine) when a default change should apply.
@@ -45,6 +51,9 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
   256×256 PNG. `thunderstore/make-icon.ps1` regenerates `icon.png` with System.Drawing.
 - Dependency: `BepInEx-BepInExPack_IL2CPP-6.0.755` (matches the BepInEx 6.0.0-be.755 we build against). Check the
   latest with `https://thunderstore.io/api/experimental/package/BepInEx/BepInExPack_IL2CPP/`.
+- **Always load-test in the Dev profile before packaging.** A config section named "Pilot's Logbook" once broke
+  loading entirely: BepInEx section/key names can't contain `= \n \t \ " ' [ ]`.
+- Published so far: 1.0.0 (no logbook). 1.0.1 adds the Pilot Logbook.
 - Bump `ChoppaNet.Protocol` whenever the wire format changes; mismatched peers are ignored by the host.
 
 ## Code map
@@ -57,6 +66,14 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
 - `ChoppaNet.cs` / `ChoppaServer.cs`: networking (see below).
 - `HeliModel.cs`: primitives; seat/exit anchors. `ChoppaCrash.cs`: seeded break-apart.
 - `ChoppaAudio.cs` / `ChoppaBonker.cs`: procedural audio and collision bonks.
+- `ChoppaLogbook.cs`: "Pilot's Logbook" anonymous usage events sent to PostHog (US region, `/batch/`; the project key is
+  write-only and public by design). On by default, opt-out via `[Pilot Logbook] Enabled`. Events: `choppa_spawned`,
+  `choppa_boarded {seat}`, `flight_ended {duration_s, distance_m, max_altitude_m, top_speed_kmh, end_speed_kmh, how: landed|bailed|ended
+  abruptly, riders, rolls, loops, upside_down_s, cockpit_view_pct}` (pilot only), `ride_ended {duration_s, how: got
+  out|jumped out|ended abruptly}` (passengers), `jumped_out {seat, height_m, speed_kmh}` (anyone leaving > 1.5 m up),
+  `flipped_upright {from: inside|outside}` (F9). The owner deliberately does NOT want game-launch or session-size events. **Any new event or property must
+  be added to the list in `thunderstore/README.md`**; full transparency was a condition. Never send names or Steam IDs.
+  "Ended abruptly" is the crash, worded so the README stays honest without spoiling it.
 - `ChoppaPhysics.cs`: collision-layer fix. `ChoppaInput.cs`: Rewired with Unity Input fallback.
 - `tools/dumper`: Mono.Cecil type dumper for the interop DLLs (excluded from the mod build). Usage:
   `dotnet build tools/dumper/dumper.csproj -o tools/dumper/out` then

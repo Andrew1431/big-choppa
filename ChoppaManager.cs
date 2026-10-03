@@ -67,6 +67,8 @@ public class ChoppaManager : MonoBehaviour
 
     void OnDestroy() => Helicopter.Crashed -= OnOwnCrash;
 
+    void OnApplicationQuit() => ChoppaLogbook.FlushNow();
+
     void Update()
     {
         try { Tick(); }
@@ -109,8 +111,13 @@ public class ChoppaManager : MonoBehaviour
             if (!h.IsProxy && !(seated && seatHeli == h && seatIndex == 0))
                 h.CommandedRates = Vector3.zero;
 
-        if (seated && seatIndex == 0 && !seatHeli.IsProxy) FlyInput(inputAllowed);
+        if (seated && seatIndex == 0 && !seatHeli.IsProxy)
+        {
+            FlyInput(inputAllowed);
+            TrackFlight(seatHeli);
+        }
         SendStates();
+        ChoppaLogbook.Tick();
     }
 
     void FixedUpdate()
@@ -251,6 +258,7 @@ public class ChoppaManager : MonoBehaviour
         {
             pendingSpawnId = 0;
             spawnHeli = h;
+            ChoppaLogbook.Spawned();
             spawnY = pos.y;
             spawnCheckAt = Time.time + 2f;
         }
@@ -416,7 +424,11 @@ public class ChoppaManager : MonoBehaviour
                 if (d < best) { best = d; target = h; }
             }
         }
-        if (target != null) target.ResetUpright();
+        if (target != null)
+        {
+            ChoppaLogbook.FlippedUpright(seated);
+            target.ResetUpright();
+        }
         else Hint("Get in or next to a choppa you're flying to flip it upright.");
     }
 
@@ -570,6 +582,9 @@ public class ChoppaManager : MonoBehaviour
         else Plugin.L.LogWarning("No camera found to take over; flying with whatever the game does.");
 
         seated = true;
+        flightStart = -1f;
+        rideStart = index == 0 ? -1f : Time.time;
+        ChoppaLogbook.Boarded(index == 0);
         if (index == 0 && !h.IsProxy)
         {
             h.EngineOn = true;
@@ -593,6 +608,10 @@ public class ChoppaManager : MonoBehaviour
             h.EngineOn = false;
             h.CommandedRates = Vector3.zero;
         }
+        float height = Altitude(h);
+        if (height > 1.5f) ChoppaLogbook.JumpedOut(index == 0, height, vel.magnitude * 3.6f);
+        if (index == 0) EndFlight(h, h.Grounded ? "landed" : "bailed", vel.magnitude * 3.6f);
+        else EndRide(height > 1.5f ? "jumped out" : "got out");
         uint id = h.Id;
         ChoppaNet.ToServer(ChoppaNet.Write(Msg.Leave, w => w.Write(id)), true);
         Restore(exitPos, exitRot, vel);
@@ -765,6 +784,95 @@ public class ChoppaManager : MonoBehaviour
         cam.transform.rotation = Quaternion.LookRotation(focus - cam.transform.position, Vector3.up);
     }
 
+    // ---------- pilot's logbook ----------
+
+    float flightStart = -1f, flightMaxAlt, flightTopSpeed, flightDistance, groundedSince = -1f;
+    float flightUpsideDown, flightCockpitTime, flightRollAccum, flightPitchAccum, rideStart = -1f;
+    int flightRolls, flightLoops;
+    Vector3 flightLastPos;
+
+    // Height above whatever is below, ignoring the choppa's own parts. Works for proxies too (no Grounded there).
+    static float Altitude(Helicopter h)
+    {
+        float best = -1f;
+        foreach (var hit in Physics.RaycastAll(h.transform.position + Vector3.up * 0.5f, Vector3.down, 2000f, ~0, QueryTriggerInteraction.Ignore))
+        {
+            if (hit.collider == null || hit.collider.transform.IsChildOf(h.transform)) continue;
+            if (hit.collider.GetComponentInParent<PlayerCharacter>() != null) continue;
+            if (best < 0f || hit.distance < best) best = hit.distance;
+        }
+        return best < 0f ? -1f : Mathf.Max(0f, best - 0.5f);
+    }
+
+    // A flight runs from lift-off until 2 s back on the ground, the pilot hopping out, or... the other thing.
+    void TrackFlight(Helicopter h)
+    {
+        if (!h.Grounded)
+        {
+            groundedSince = -1f;
+            Vector3 pos = h.transform.position;
+            if (flightStart < 0f)
+            {
+                flightStart = Time.time;
+                flightMaxAlt = flightTopSpeed = flightDistance = 0f;
+                flightUpsideDown = flightCockpitTime = flightRollAccum = flightPitchAccum = 0f;
+                flightRolls = flightLoops = 0;
+                flightLastPos = pos;
+            }
+            float dt = Time.deltaTime;
+            if (Vector3.Dot(h.transform.up, Vector3.up) < 0f) flightUpsideDown += dt;
+            if (camMode == CamMode.Cockpit) flightCockpitTime += dt;
+
+            // Integrate rotation about the choppa's own axes; a full 360 one way counts as a roll or loop.
+            // Wobbling back and forth cancels out.
+            Vector3 w = h.transform.InverseTransformDirection(h.Body.angularVelocity) * (Mathf.Rad2Deg * dt);
+            flightRollAccum += w.z;
+            flightPitchAccum += w.x;
+            while (Mathf.Abs(flightRollAccum) >= 360f) { flightRolls++; flightRollAccum -= Mathf.Sign(flightRollAccum) * 360f; }
+            while (Mathf.Abs(flightPitchAccum) >= 360f) { flightLoops++; flightPitchAccum -= Mathf.Sign(flightPitchAccum) * 360f; }
+            flightDistance += Vector3.Distance(pos, flightLastPos);
+            flightLastPos = pos;
+            flightMaxAlt = Mathf.Max(flightMaxAlt, Altitude(h));
+            flightTopSpeed = Mathf.Max(flightTopSpeed, h.Body.linearVelocity.magnitude * 3.6f);
+        }
+        else if (flightStart >= 0f)
+        {
+            if (groundedSince < 0f) groundedSince = Time.time;
+            else if (Time.time - groundedSince > 2f) EndFlight(h, "landed", h.Velocity.magnitude * 3.6f);
+        }
+    }
+
+    void EndFlight(Helicopter h, string how, float endSpeedKmh)
+    {
+        if (flightStart < 0f) return;
+        float duration = Time.time - flightStart;
+        flightStart = -1f;
+        groundedSince = -1f;
+        if (duration < 1f) return;
+        ChoppaLogbook.FlightEnded(new ChoppaLogbook.Flight
+        {
+            Seconds = duration,
+            Distance = flightDistance,
+            MaxAltitude = flightMaxAlt,
+            TopSpeedKmh = flightTopSpeed,
+            EndSpeedKmh = endSpeedKmh,
+            How = how,
+            Riders = h.Occupants.Count(o => o != 0),
+            Rolls = flightRolls,
+            Loops = flightLoops,
+            UpsideDownSeconds = flightUpsideDown,
+            CockpitPercent = 100f * flightCockpitTime / duration,
+        });
+    }
+
+    void EndRide(string how)
+    {
+        if (rideStart < 0f) return;
+        float duration = Time.time - rideStart;
+        rideStart = -1f;
+        ChoppaLogbook.RideEnded(duration, how);
+    }
+
     // ---------- crashing ----------
 
     // Our PC simulates this choppa and it just hit something hard: tell everyone, then break our copy.
@@ -787,6 +895,8 @@ public class ChoppaManager : MonoBehaviour
             Vector3 crashPos = h.transform.position;
             if (seated && seatHeli == h)
             {
+                if (seatIndex == 0) EndFlight(h, "ended abruptly", impact.magnitude * 3.6f);
+                else EndRide("ended abruptly");
                 Vector3 seatPos = h.Seats[seatIndex].position + Vector3.up * (1.0f * ChoppaConfig.HeliScale.Value);
                 Vector3 fling = impact * 0.4f + Vector3.up * 9f + UnityEngine.Random.insideUnitSphere * 3f;
                 var yaw = Quaternion.Euler(0f, h.transform.eulerAngles.y, 0f);

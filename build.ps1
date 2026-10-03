@@ -1,6 +1,9 @@
 [CmdletBinding()]
 param(
     [string]$GameDirectory = 'E:\SteamLibrary\steamapps\common\Big Walk',
+    # BepInEx folder to build against and install into. Default: the game folder's, else r2modman's "Dev" profile.
+    # Never the Default profile: that one runs the published Thunderstore version.
+    [string]$BepInExDirectory,
     # Also copy the BepInEx loader itself (from this machine's install) to every remote target.
     [switch]$InstallBepInEx
 )
@@ -8,13 +11,25 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $projectDirectory = $PSScriptRoot
-$coreDirectory = Join-Path $GameDirectory 'BepInEx\core'
-$interopDirectory = Join-Path $GameDirectory 'BepInEx\interop'
-$pluginDirectory = Join-Path $GameDirectory 'BepInEx\plugins\BigChoppa'
+if (-not $BepInExDirectory) {
+    $candidates = @(
+        (Join-Path $GameDirectory 'BepInEx'),
+        (Join-Path $env:APPDATA 'r2modmanPlus-local\BigWalk\profiles\Dev\BepInEx')
+    )
+    $BepInExDirectory = $candidates | Where-Object { Test-Path -LiteralPath (Join-Path $_ 'core\BepInEx.Unity.IL2CPP.dll') } | Select-Object -First 1
+    if (-not $BepInExDirectory) { throw "BepInEx not found in: $($candidates -join ', '). Create an r2modman profile named 'Dev' and launch it once, or pass -BepInExDirectory." }
+}
+$coreDirectory = Join-Path $BepInExDirectory 'core'
+$interopDirectory = Join-Path $BepInExDirectory 'interop'
+$pluginDirectory = Join-Path $BepInExDirectory 'plugins\BigChoppa'
+Write-Host "Using BepInEx at $BepInExDirectory"
 
 if (-not (Test-Path -LiteralPath (Join-Path $coreDirectory 'BepInEx.Unity.IL2CPP.dll') -PathType Leaf)) {
-    throw "BepInEx was not found at '$coreDirectory'. Install it into the game folder before building."
+    throw "BepInEx was not found at '$coreDirectory'."
 }
+# A Thunderstore copy installed by a mod manager would load alongside this dev build (same GUID, one gets skipped).
+$installed = Get-ChildItem -LiteralPath (Join-Path $BepInExDirectory 'plugins') -Directory -Filter '*-BigChoppa' -ErrorAction SilentlyContinue
+if ($installed) { Write-Warning "Mod-manager copy found at $($installed.FullName); disable it in r2modman or use a separate dev profile." }
 if (-not (Test-Path -LiteralPath (Join-Path $interopDirectory 'Assembly-CSharp.dll') -PathType Leaf)) {
     throw "Interop assemblies were not found at '$interopDirectory'. Launch the game once with BepInEx installed to generate them."
 }
@@ -56,7 +71,7 @@ if (Test-Path -LiteralPath $targetsFile) {
                 robocopy (Join-Path $GameDirectory 'dotnet') (Join-Path $target 'dotnet') /E /NFL /NDL /NJH /NJS /NP | Out-Null
                 # interop + cache are generated per game version; copying them skips the slow first launch.
                 foreach ($d in 'core', 'patchers', 'unity-libs', 'interop', 'cache') {
-                    $src = Join-Path $GameDirectory "BepInEx\$d"
+                    $src = Join-Path $BepInExDirectory $d
                     if (Test-Path -LiteralPath $src) {
                         robocopy $src (Join-Path $target "BepInEx\$d") /E /NFL /NDL /NJH /NJS /NP | Out-Null
                     }

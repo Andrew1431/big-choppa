@@ -35,6 +35,10 @@ internal static class ChoppaConfig
     // Audio
     public static ConfigEntry<float> AudioVolume, AudioMaxDistance;
 
+    // Pilot's Logbook
+    public static ConfigEntry<bool> LogbookEnabled;
+    public static ConfigEntry<string> LogbookInstallId;
+
     // Networking
     public static ConfigEntry<bool> NetEnabled;
     public static ConfigEntry<float> NetSendRate, NetInterpDelay;
@@ -102,6 +106,10 @@ internal static class ChoppaConfig
         const string a = "Audio";
         AudioVolume = cfg.Bind(a, "Volume", 0.8f, "Choppa sound volume (rotor, motor, bonks). 0 = silent.");
         AudioMaxDistance = cfg.Bind(a, "MaxHearingDistance", 250f, "How far away you can hear a choppa (metres).");
+
+        const string l = "Pilot Logbook"; // BepInEx forbids ' in section names
+        LogbookEnabled = cfg.Bind(l, "Enabled", true, "Send a few anonymous flight stats (spawns, boardings, flight time/height/speed) so the author can see how the choppa gets used. No names, Steam IDs or locations. Set to false to turn it off completely.");
+        LogbookInstallId = cfg.Bind(l, "AnonymousId", "", "Random id generated on first use so your flights can be told apart from other people's. Not linked to you. Delete it to get a new one.");
 
         const string n = "Networking";
         NetEnabled = cfg.Bind(n, "Enabled", true, "Share choppas with other players. Everyone in the lobby (host included) needs the mod; a host without it may kick you when you join.");
