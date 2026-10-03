@@ -19,6 +19,7 @@ public class Helicopter : MonoBehaviour
     public uint[] Occupants = new uint[SeatCount];
 
     public Rigidbody Body;
+    public AudioSource RotorAudio, TurbineAudio;
     public Transform MainRotor, TailRotor;
     public Transform[] Seats, Exits;
     public Transform PilotSeat => Seats[0];
@@ -62,6 +63,8 @@ public class Helicopter : MonoBehaviour
         HeliModel.Build(heli, ChoppaConfig.HeliScale.Value);
         foreach (var t in root.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = layer;
         ChoppaPhysics.CollideWithEverything(root);
+        ChoppaAudio.Attach(heli);
+        ChoppaBonker.Add(root, 0.9f, 2.5f);
 
         // Pivot roughly mid-cabin: low enough to sit on its skids, high enough to swing from the rotor.
         body.automaticCenterOfMass = false;
@@ -133,6 +136,7 @@ public class Helicopter : MonoBehaviour
     void Update()
     {
         float dt = Time.deltaTime;
+        ChoppaAudio.Drive(this);
         if (MainRotor != null) MainRotor.Rotate(0f, RotorSpin * 900f * dt, 0f, Space.Self);
         if (TailRotor != null) TailRotor.Rotate(RotorSpin * 1600f * dt, 0f, 0f, Space.Self);
 

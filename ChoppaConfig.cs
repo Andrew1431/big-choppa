@@ -32,6 +32,9 @@ internal static class ChoppaConfig
     public static ConfigEntry<bool> SitWhileFlying;
     public static ConfigEntry<int> ChoppaLayer;
 
+    // Audio
+    public static ConfigEntry<float> AudioVolume, AudioMaxDistance;
+
     // Networking
     public static ConfigEntry<bool> NetEnabled;
     public static ConfigEntry<float> NetSendRate, NetInterpDelay;
@@ -95,6 +98,10 @@ internal static class ChoppaConfig
         CockpitEyeHeight = cfg.Bind(m, "CockpitEyeHeightOffset", 0.0f, "Nudge the cockpit camera up/down.");
         SitWhileFlying = cfg.Bind(m, "SitWhileFlying", true, "Ask the game to put your character in its sitting pose while flying.");
         ChoppaLayer = cfg.Bind(m, "PhysicsLayer", -1, "Unity layer for the choppa's colliders. -1 = auto-detect one that collides with the ground (see LogOutput.log).");
+
+        const string a = "Audio";
+        AudioVolume = cfg.Bind(a, "Volume", 0.8f, "Choppa sound volume (rotor, motor, bonks). 0 = silent.");
+        AudioMaxDistance = cfg.Bind(a, "MaxHearingDistance", 250f, "How far away you can hear a choppa (metres).");
 
         const string n = "Networking";
         NetEnabled = cfg.Bind(n, "Enabled", true, "Share choppas with other players. Everyone in the lobby (host included) needs the mod; a host without it may kick you when you join.");

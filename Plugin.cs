@@ -20,6 +20,7 @@ public sealed class Plugin : BasePlugin
         ChoppaConfig.Bind(Config);
 
         ClassInjector.RegisterTypeInIl2Cpp<Helicopter>();
+        ClassInjector.RegisterTypeInIl2Cpp<ChoppaBonker>();
         ClassInjector.RegisterTypeInIl2Cpp<ChoppaManager>();
         AddComponent<ChoppaManager>();
 

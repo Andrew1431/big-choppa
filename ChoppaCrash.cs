@@ -24,6 +24,8 @@ internal static class ChoppaCrash
         float s = ChoppaConfig.HeliScale.Value;
         float life = ChoppaConfig.DebrisSeconds.Value;
 
+        ChoppaAudio.PlayCrash(center);
+
         var pieces = new List<Transform>();
         if (heli.MainRotor != null) pieces.Add(heli.MainRotor);
         if (heli.TailRotor != null) pieces.Add(heli.TailRotor);
@@ -58,6 +60,7 @@ internal static class ChoppaCrash
             rb.angularVelocity = Random.insideUnitSphere * 12f;
 
             ChoppaPhysics.CollideWithEverything(t.gameObject);
+            ChoppaBonker.Add(t.gameObject, isRotor ? 0.8f : Random.Range(0.1f, 0.6f), 1.2f);
 
             if (t == heli.MainRotor)
             {
