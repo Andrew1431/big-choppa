@@ -66,7 +66,7 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
   latest with `https://thunderstore.io/api/experimental/package/BepInEx/BepInExPack_IL2CPP/`.
 - **Always load-test in the Dev profile before packaging.** A config section named "Pilot's Logbook" once broke
   loading entirely: BepInEx section/key names can't contain `= \n \t \ " ' [ ]`.
-- Published so far: 1.0.0 (no logbook). 1.0.1 adds the Pilot Logbook. 1.0.2 (README stats card only, no code change) is packaged once the card is live. 1.0.3 adds night lights, live config reload and the CenterOfMassHeight migration.
+- Published so far: 1.0.0 (no logbook). 1.0.1 adds the Pilot Logbook. 1.0.2 (README stats card only, no code change) is packaged once the card is live. 1.0.3 adds night lights, live config reload and the CenterOfMassHeight migration. 1.1.0 adds choppa pockets (confirmed: the game only saves items players are actively holding, so the pocket warning stays).
 - Bump `ChoppaNet.Protocol` whenever the wire format changes; mismatched peers are ignored by the host.
 
 ## Code map
@@ -80,6 +80,12 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
 - `HeliModel.cs`: primitives; seat/exit anchors. `ChoppaCrash.cs`: seeded break-apart.
 - `ChoppaLights.cs`: lamp lenses (unlit, swapped on/off) plus three real lights per choppa: headlight spot, cabin
   glow (always on), flashing roof beacon. Powered = `EngineOn || RotorSpin > 0.1` so proxies light up too.
+- `ChoppaPockets.cs`: 6 side pockets. Each is a game `PropHome` (`pinGroup` copied from a backpack pocket, normally
+  `GoesInBackpack`) plus a `CastableTarget` so the game's own crosshair place/pick-up and Mirror sync do the work.
+  Homes are addressed over the network by ticket (`SeaShell.ShellReference(ticket)` → `TicketOffice`); ours are
+  `60000 + (id % 900) * 6 + slot`, so spawns pick an id with a free slot. Items must be released
+  (`ReleaseAll`: host `ServerSetUnpinned`, clients `LocalUnpin`) before a choppa is destroyed or they'd be destroyed
+  with it. The game doesn't save pocketed items; both READMEs and the changelog must keep saying so up front.
 - `ChoppaAudio.cs` / `ChoppaBonker.cs`: procedural audio and collision bonks.
 - `ChoppaLogbook.cs`: "Pilot's Logbook" anonymous usage events sent to PostHog (US region, `/batch/`; the project key is
   write-only and public by design). On by default, opt-out via `[Pilot Logbook] Enabled`. Events: `choppa_spawned`,
@@ -101,7 +107,8 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
 - `tools/dumper`: Mono.Cecil type dumper for the interop DLLs (excluded from the mod build). Usage:
   `dotnet build tools/dumper/dumper.csproj -o tools/dumper/out` then
   `tools/dumper/out/dumper.exe "<game>/BepInEx/interop/Mirror.dll" '^Mirror\.NetworkServer$'`
-  (append `names` to list type names only). This is how game APIs were discovered; there's no source.
+  (append `names` to list type names only). Prints fields, enum values and which members are static. This is how
+  game APIs were discovered; there's no source.
 
 ## Hard-won game / IL2CPP facts
 
@@ -144,3 +151,10 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
   area-of-interest culling can't hide players). Remote passengers are pinned to our copy's seat each frame.
 - Offline (no Mirror session, or `Networking.Enabled = false`): messages loop back in-process, same code path.
 - v1 worked first try between two PCs (host + client), including passengers and crashes.
+
+## TODO / known bugs
+
+- **Late joiners don't see existing choppas.** A player who joins a lobby after choppas were spawned sees none of them
+  until someone presses F8 (the new Spawn message makes them show up; unclear whether the others appear too). The
+  host probably needs to replay every existing choppa (Spawn + Seats + Owner) to a connection right after its
+  `HelloAck`. Owner is fine leaving it for now (reported after 1.1.0).

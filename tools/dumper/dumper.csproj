@@ -5,8 +5,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>disable</Nullable>
     <GameDir Condition="'$(GameDir)' == ''">E:\SteamLibrary\steamapps\common\Big Walk</GameDir>
+    <BepInExDir Condition="'$(BepInExDir)' == '' And Exists('$(GameDir)\BepInEx\core')">$(GameDir)\BepInEx</BepInExDir>
+    <BepInExDir Condition="'$(BepInExDir)' == ''">$(APPDATA)\r2modmanPlus-local\BigWalk\profiles\Dev\BepInEx</BepInExDir>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Mono.Cecil"><HintPath>$(GameDir)\BepInEx\core\Mono.Cecil.dll</HintPath></Reference>
+    <Reference Include="Mono.Cecil"><HintPath>$(BepInExDir)\core\Mono.Cecil.dll</HintPath></Reference>
   </ItemGroup>
 </Project>

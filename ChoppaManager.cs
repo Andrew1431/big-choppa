@@ -246,7 +246,7 @@ public class ChoppaManager : MonoBehaviour
                 if (!helis.TryGetValue(id, out var h)) break;
                 if (seated && seatHeli == h) ForceUnseat("choppa removed");
                 helis.Remove(id);
-                if (Alive(h)) Destroy(h.gameObject);
+                Discard(h);
                 break;
             }
         }
@@ -362,12 +362,20 @@ public class ChoppaManager : MonoBehaviour
     void ClearWorld()
     {
         if (seated) ForceUnseat("network session changed");
-        foreach (var h in helis.Values)
-            if (Alive(h)) Destroy(h.gameObject);
+        foreach (var h in helis.Values) Discard(h);
         helis.Clear();
         sendTimers.Clear();
         pendingBoardId = pendingSpawnId = 0;
         ChoppaServer.Reset();
+    }
+
+    // Pocketed items drop to the ground instead of vanishing with the choppa.
+    static void Discard(Helicopter h)
+    {
+        if (!Alive(h)) return;
+        try { h.Pockets?.ReleaseAll(Vector3.zero); }
+        catch (Exception e) { Plugin.L.LogError($"Emptying pockets: {e}"); }
+        Destroy(h.gameObject);
     }
 
     // ---------- spawn / board ----------
@@ -399,7 +407,7 @@ public class ChoppaManager : MonoBehaviour
 
         uint id;
         do id = (uint)UnityEngine.Random.Range(1, int.MaxValue) ^ ((uint)UnityEngine.Random.Range(0, 2) << 31);
-        while (id == 0 || helis.ContainsKey(id));
+        while (id == 0 || helis.Keys.Any(k => ChoppaPockets.Slot(k) == ChoppaPockets.Slot(id))); // pockets need a free ticket slot
         pendingSpawnId = id;
         ChoppaNet.ToServer(ChoppaNet.Write(Msg.Spawn, w => { w.Write(id); w.Write(pos); w.Write(rot); }), true);
     }
@@ -928,6 +936,7 @@ public class ChoppaManager : MonoBehaviour
 
         helis.Remove(h.Id);
         sendTimers.Remove(h.Id);
+        h.Pockets?.ReleaseAll(impact);
         ChoppaCrash.Break(h, seed);
         Hint($"Choppa destroyed! Press {ChoppaConfig.SpawnKey.Value} for a new one.");
     }

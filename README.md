@@ -4,6 +4,9 @@
 
 A goofy playground-style helicopter for Big Walk with Arma-style flight controls (BepInEx 6 IL2CPP mod).
 
+> **Choppa pockets don't count as "held".** The six side pockets take anything a backpack takes, but the game only
+> saves items players are actively holding. Anything left in a pocket when the game ends isn't kept.
+
 ## Build and install
 
 Close Big Walk, then in PowerShell in this folder:
@@ -64,6 +67,7 @@ Shared. Everyone in the lobby, host included, needs the mod (a host without it m
 - `HeliModel.cs`: the primitive-built model
 - `ChoppaMaterials.cs`: URP-compatible materials
 - `ChoppaLights.cs`: nav lights, beacons, strobes, headlight, cabin glow
+- `ChoppaPockets.cs`: six side pockets built on the game's `PropHome` (backpack-style item slots)
 - `ChoppaManager.cs`: local player lookup, choppa list sync, boarding/seats, camera, HUD, crash handling
 - `ChoppaNet.cs`: raw Mirror transport, handshake, offline loopback
 - `ChoppaServer.cs`: host-side authority (spawns, seats, ownership, relaying)

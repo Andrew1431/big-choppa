@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.0
+
+- Choppa pockets: three on each side, holding anything a backpack can.
+  **Items in choppa pockets are not "held" when the game saves.** Take them out before you quit, or they won't be kept.
+
 ## 1.0.3
 
 - Night flying: navigation lights, flashing beacons and strobes while someone's at the controls, a long-reaching

@@ -26,6 +26,7 @@ public class Helicopter : MonoBehaviour
     public Transform[] Pupils;
     public Vector3[] PupilRest;
     internal ChoppaLights Lights;
+    internal ChoppaPockets Pockets;
 
     public bool EngineOn;
     public float Collective;   // 0..1
@@ -64,6 +65,7 @@ public class Helicopter : MonoBehaviour
         HeliModel.Build(heli, ChoppaConfig.HeliScale.Value);
         foreach (var t in root.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = layer;
         ChoppaPhysics.CollideWithEverything(root);
+        heli.Pockets?.Activate();
         ChoppaAudio.Attach(heli);
         ChoppaBonker.Add(root, 0.9f, 2.5f);
 
@@ -142,6 +144,7 @@ public class Helicopter : MonoBehaviour
         if (TailRotor != null) TailRotor.Rotate(RotorSpin * 1600f * dt, 0f, 0f, Space.Self);
         // Proxies don't know EngineOn, but their synced rotor spin says whether someone's flying.
         Lights?.Drive(EngineOn || RotorSpin > 0.1f);
+        if (!Broken) Pockets?.Tick();
 
         // Googly eyes slosh against acceleration.
         if (Pupils != null)
