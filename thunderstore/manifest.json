@@ -1,0 +1,9 @@
+{
+  "name": "BigChoppa",
+  "version_number": "1.0.0",
+  "website_url": "https://github.com/Andrew1431/big-choppa",
+  "description": "A goofy playground helicopter flown with collective, pedals and mouse cyclic. Seats 3 and is shared with everyone in the lobby. Everyone needs the mod.",
+  "dependencies": [
+    "BepInEx-BepInExPack_IL2CPP-6.0.755"
+  ]
+}

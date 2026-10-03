@@ -34,7 +34,7 @@ Hit something hard enough and it breaks into bouncing toy pieces. The pilot gets
 
 ## Config
 
-All keys and tuning values are in `BepInEx\config\com.ryan1.bigwalk.bigchoppa.cfg`. The file appears after the first launch with the mod and is re-read at startup. Useful knobs:
+All keys and tuning values are in `BepInEx\config\com.andrew1431.bigchoppa.cfg`. The file appears after the first launch with the mod and is re-read at startup. Useful knobs:
 
 - `Controls.MouseSensitivity`, `InvertPitch`, `InvertRoll`
 - `Flight.AutoLevel` (0 = Arma-like; 0.3 = friendlier), `ControlResponse`, `YawRate`, `MaxLiftG`, drags

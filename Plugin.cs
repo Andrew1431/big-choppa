@@ -8,9 +8,9 @@ namespace BigChoppa;
 [BepInPlugin(PluginGuid, PluginName, PluginVersion)]
 public sealed class Plugin : BasePlugin
 {
-    public const string PluginGuid = "com.ryan1.bigwalk.bigchoppa";
+    public const string PluginGuid = "com.andrew1431.bigchoppa";
     public const string PluginName = "Big Choppa";
-    public const string PluginVersion = "0.1.0";
+    public const string PluginVersion = "1.0.0";
 
     internal static ManualLogSource L;
 

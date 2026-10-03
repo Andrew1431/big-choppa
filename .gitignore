@@ -44,3 +44,9 @@ remote-targets.txt
 
 # Personal dev notes
 *.local.md
+
+# Thunderstore package output
+dist/
+
+# Dumper build output
+tools/dumper/out/

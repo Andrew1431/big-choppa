@@ -110,6 +110,6 @@ internal static class ChoppaConfig
 
         const string d = "Debug";
         ShowHud = cfg.Bind(d, "ShowHud", true, "Show the flight HUD while flying.");
-        VerboseLogging = cfg.Bind(d, "VerboseLogging", true, "Log extra detail to LogOutput.log (useful while we get this working).");
+        VerboseLogging = cfg.Bind(d, "VerboseLogging", false, "Log extra detail to LogOutput.log and show a network status line on screen.");
     }
 }
