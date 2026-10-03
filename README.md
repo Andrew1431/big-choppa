@@ -1,5 +1,7 @@
 # Big Choppa
 
+[![Big Choppa Pilot's Logbook: live flight stats](https://big-choppa.hartwigdev.ca/card.svg)](https://thunderstore.io/c/big-walk/p/Andrew1431/BigChoppa/)
+
 A goofy playground-style helicopter for Big Walk with Arma-style flight controls (BepInEx 6 IL2CPP mod).
 
 ## Build and install

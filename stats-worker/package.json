@@ -1,0 +1,12 @@
+{
+  "name": "big-choppa-stats",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "preview": "node preview.js"
+  },
+  "devDependencies": {
+    "wrangler": "^4"
+  }
+}

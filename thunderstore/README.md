@@ -1,5 +1,7 @@
 # Big Choppa
 
+![Big Choppa Pilot's Logbook: live flight stats](https://big-choppa.hartwigdev.ca/card.svg)
+
 A goofy, playground-style toy helicopter for Big Walk, flown with collective, pedals and cyclic.
 
 It has three seats, the pilot plus a two-person bench, and everyone in the lobby sees the same choppas.
@@ -73,6 +75,8 @@ Each entry also carries the mod version and a random ID made up on your PC, so o
 - **Manual install:** open `BepInEx/config/com.andrew1431.bigchoppa.cfg` and change `Enabled = true` under `[Pilot Logbook]` to `Enabled = false`.
 
 With it off, nothing is sent at all.
+
+The card at the top of this page shows everyone's totals added together, refreshed about every 10 minutes.
 
 ## Source and bug reports
 

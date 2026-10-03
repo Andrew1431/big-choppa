@@ -53,7 +53,7 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
   latest with `https://thunderstore.io/api/experimental/package/BepInEx/BepInExPack_IL2CPP/`.
 - **Always load-test in the Dev profile before packaging.** A config section named "Pilot's Logbook" once broke
   loading entirely: BepInEx section/key names can't contain `= \n \t \ " ' [ ]`.
-- Published so far: 1.0.0 (no logbook). 1.0.1 adds the Pilot Logbook.
+- Published so far: 1.0.0 (no logbook). 1.0.1 adds the Pilot Logbook. 1.0.2 (README stats card only, no code change) is packaged once the card is live.
 - Bump `ChoppaNet.Protocol` whenever the wire format changes; mismatched peers are ignored by the host.
 
 ## Code map
@@ -74,6 +74,11 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
   `flipped_upright {from: inside|outside}` (F9). The owner deliberately does NOT want game-launch or session-size events. **Any new event or property must
   be added to the list in `thunderstore/README.md`**; full transparency was a condition. Never send names or Steam IDs.
   "Ended abruptly" is the crash, worded so the README stays honest without spoiling it.
+- `stats-worker/`: Cloudflare Worker `big-choppa-stats` at https://big-choppa.hartwigdev.ca serving `/card.svg` (the
+  live stats card at the top of both READMEs) and `/stats.json`, from a HogQL query against PostHog project 643292,
+  cached 10 min. The PostHog personal API key (read-only query scope) is the Worker secret `POSTHOG_PERSONAL_KEY`;
+  it must never go in the repo or chat. `node preview.js` renders the card with fake numbers; `npx wrangler deploy`
+  ships it (needs `npx wrangler login` first). New logbook stats on the card need both the query and `card.js` updated.
 - `ChoppaPhysics.cs`: collision-layer fix. `ChoppaInput.cs`: Rewired with Unity Input fallback.
 - `tools/dumper`: Mono.Cecil type dumper for the interop DLLs (excluded from the mod build). Usage:
   `dotnet build tools/dumper/dumper.csproj -o tools/dumper/out` then

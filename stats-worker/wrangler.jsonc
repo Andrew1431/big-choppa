@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "big-choppa-stats",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-01",
+  "workers_dev": true,
+  "routes": [{ "pattern": "big-choppa.hartwigdev.ca", "custom_domain": true }],
+  "vars": {
+    "POSTHOG_PROJECT_ID": "643292",
+    "POSTHOG_HOST": "https://us.posthog.com"
+  }
+  // POSTHOG_PERSONAL_KEY is a secret: npx wrangler secret put POSTHOG_PERSONAL_KEY
+}
