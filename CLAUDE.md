@@ -25,6 +25,9 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
   (gitignored). A push fails with a warning if the game is running on that machine (DLL locked) or the PC is offline.
 - `.\build.ps1 -InstallBepInEx` also copies the BepInEx loader + interop to the remote targets (first-time setup, or
   after a game update regenerates interop).
+- **Second-PC pushes are on hold.** Olga's install (mod + BepInEx) was removed on 2026-10-03; she'll use the modpack.
+  Her line in `remote-targets.txt` is commented out, so builds only install locally. Don't push to her machine until
+  the owner wants multiplayer testing again; then uncomment it and run `.\build.ps1 -InstallBepInEx`.
 - Default game path: `E:\SteamLibrary\steamapps\common\Big Walk` (`-GameDirectory` to override).
 - BepInEx location: the game folder's `BepInEx` if present, else the r2modman profile named **Dev**
   (`%APPDATA%\r2modmanPlus-local\BigWalk\profiles\Dev\BepInEx`); `-BepInExDirectory` overrides. The **Default**
@@ -48,7 +51,7 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
 - Dev-only code goes inside `#if DEVBUILD`. `build.ps1` defines it; `package.ps1` builds with `-Publish`, which
   doesn't, and refuses to package a DLL containing `DevAutoHost`. Dev-only config entries must be inside the `#if` too, so they never show up in players' configs.
 - `[Dev] AutoHost` (dev builds, default false, set true on this PC only): `DevAutoHost.cs` clicks through the
-  main menu and hosts the most recent save. Hold Shift at startup to skip. Olga leaves it off since she joins as a client.
+  main menu and hosts the most recent save. Hold Shift at startup to skip. A second test PC that joins as a client leaves it off.
 - `Debug.VerboseLogging` (default false) adds detail to the log and an on-screen network status line.
 
 ## Versioning and Thunderstore release
