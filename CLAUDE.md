@@ -66,7 +66,7 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
   latest with `https://thunderstore.io/api/experimental/package/BepInEx/BepInExPack_IL2CPP/`.
 - **Always load-test in the Dev profile before packaging.** A config section named "Pilot's Logbook" once broke
   loading entirely: BepInEx section/key names can't contain `= \n \t \ " ' [ ]`.
-- Published so far: 1.0.0 (no logbook). 1.0.1 adds the Pilot Logbook. 1.0.2 (README stats card only, no code change) is packaged once the card is live.
+- Published so far: 1.0.0 (no logbook). 1.0.1 adds the Pilot Logbook. 1.0.2 (README stats card only, no code change) is packaged once the card is live. 1.0.3 adds night lights, live config reload and the CenterOfMassHeight migration.
 - Bump `ChoppaNet.Protocol` whenever the wire format changes; mismatched peers are ignored by the host.
 
 ## Code map

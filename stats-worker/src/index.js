@@ -3,7 +3,7 @@
 import { renderCard } from './card.js';
 
 const CACHE_SECONDS = 600;
-const CACHE_KEY = 'https://big-choppa-stats.internal/stats/v1';
+const CACHE_KEY = 'https://big-choppa-stats.internal/stats/v2';
 
 const QUERY = `
 SELECT
@@ -22,18 +22,41 @@ SELECT
 FROM events
 WHERE event IN ('flight_ended', 'jumped_out', 'choppa_spawned')`;
 
-async function queryPostHog(env) {
-  if (!env.POSTHOG_PERSONAL_KEY) throw new Error('POSTHOG_PERSONAL_KEY secret is not set');
+// Days are UTC to match the card's "updated … UTC" footer.
+const DAILY_QUERY = `
+SELECT toString(toDate(toTimeZone(timestamp, 'UTC'))) AS day, count() AS flights
+FROM events
+WHERE event = 'flight_ended' AND timestamp >= now() - INTERVAL 8 DAY
+GROUP BY day`;
+
+async function runQuery(env, query) {
   const res = await fetch(`${env.POSTHOG_HOST}/api/projects/${env.POSTHOG_PROJECT_ID}/query/`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${env.POSTHOG_PERSONAL_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query: { kind: 'HogQLQuery', query: QUERY } }),
+    body: JSON.stringify({ query: { kind: 'HogQLQuery', query } }),
     signal: AbortSignal.timeout(15000),
   });
   if (!res.ok) throw new Error(`PostHog ${res.status}: ${(await res.text()).slice(0, 300)}`);
-  const { columns, results } = await res.json();
-  const row = results?.[0] ?? [];
-  return Object.fromEntries(columns.map((c, i) => [c, Number(row[i]) || 0]));
+  return res.json();
+}
+
+// The last 7 UTC days, oldest first, with days nobody flew filled in as 0.
+function lastSevenDays(results, now = new Date()) {
+  const counts = Object.fromEntries((results ?? []).map(([day, n]) => [day, Number(n) || 0]));
+  return Array.from({ length: 7 }, (_, i) => {
+    const day = new Date(now.getTime() - (6 - i) * 86_400_000).toISOString().slice(0, 10);
+    return { day, flights: counts[day] ?? 0 };
+  });
+}
+
+async function queryPostHog(env) {
+  if (!env.POSTHOG_PERSONAL_KEY) throw new Error('POSTHOG_PERSONAL_KEY secret is not set');
+  const [totals, daily] = await Promise.all([runQuery(env, QUERY), runQuery(env, DAILY_QUERY)]);
+  const row = totals.results?.[0] ?? [];
+  return {
+    ...Object.fromEntries(totals.columns.map((c, i) => [c, Number(row[i]) || 0])),
+    daily: lastSevenDays(daily.results),
+  };
 }
 
 async function getStats(env, ctx) {

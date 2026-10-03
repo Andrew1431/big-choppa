@@ -1,6 +1,6 @@
 // Renders the "Pilot's Logbook" flight-board card. Pure function so preview.js can render it offline.
 
-const W = 800, H = 292;
+const W = 800, H = 480;
 const ink = '#1d2b53', soft = '#5a6b8c';
 const stripes = ['#ff5a5f', '#ffb000', '#2bb673', '#3a86ff'];
 
@@ -47,6 +47,37 @@ const tile = (i, value, label) => {
   </g>`;
 };
 
+// Flights per day for the last 7 days, in a white panel under the tiles. daily = [{ day: 'YYYY-MM-DD', flights }].
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+function chart(daily, error) {
+  const x0 = 24, y0 = 264, w = 752, h = 184;
+  const base = 150, tall = 96, colW = (w - 32) / 7, barW = 50;
+  const days = Array.isArray(daily) && daily.length ? daily : [];
+  const max = Math.max(1, ...days.map(d => d.flights));
+  const bars = days.map((d, i) => {
+    const cx = 16 + colW * i + colW / 2, x = cx - barW / 2;
+    const bh = d.flights > 0 ? Math.max(8, (d.flights / max) * tall) : 0;
+    const label = i === days.length - 1 ? 'Today' : DAYS[new Date(`${d.day}T00:00:00Z`).getUTCDay()];
+    const color = stripes[i % 4];
+    // Glossy highlight stripe, like a Wii menu button; skipped on stubby bars where it would just be a dot.
+    const shine = bh > 28 ? `<rect x="${x + 7}" y="${base - bh + 6}" width="9" height="${bh - 16}" rx="4.5" fill="#fff" opacity="0.35"/>` : '';
+    const bar = bh > 0
+      ? `<rect x="${x}" y="${base - bh}" width="${barW}" height="${bh}" rx="10" fill="${color}"/>${shine}`
+      : `<rect x="${x}" y="${base - 6}" width="${barW}" height="6" rx="3" fill="#dfe7f2"/>`;
+    return `
+    ${bar}
+    <text x="${cx}" y="${base - bh - 8}" text-anchor="middle" font-size="15" font-weight="800" fill="${ink}">${num(d.flights)}</text>
+    <text x="${cx}" y="${base + 20}" text-anchor="middle" font-size="13" font-weight="${label === 'Today' ? 800 : 600}" fill="${label === 'Today' ? ink : soft}">${label}</text>`;
+  }).join('');
+  return `
+  <g transform="translate(${x0} ${y0})">
+    <rect width="${w}" height="${h}" rx="12" fill="#fff"/>
+    <rect width="${w}" height="6" rx="3" fill="${stripes[3]}"/>
+    <text x="14" y="30" font-size="13" font-weight="700" fill="${soft}">flights per day · last 7 days</text>
+    ${error || !days.length ? `<text x="${w / 2}" y="${base - 24}" text-anchor="middle" font-size="26" font-weight="800" fill="${ink}">—</text>` : bars}
+  </g>`;
+}
+
 export function renderCard(stats, { updated = new Date(), error = false } = {}) {
   const s = stats ?? {};
   const v = (f, n) => (error || n == null ? '—' : f(n));
@@ -80,6 +111,7 @@ export function renderCard(stats, { updated = new Date(), error = false } = {}) 
   <text x="383" y="41" font-size="13" font-weight="700" fill="#c0392b">LIVE</text>
   ${heli(650, 4)}
   ${tiles.map(([val, label], i) => tile(i, val, label)).join('')}
+  ${chart(s.daily, error)}
   <text x="24" y="${H - 18}" font-size="13" font-weight="600" fill="${ink}" opacity="0.7">${esc(footer)}</text>
 </svg>`;
 }
