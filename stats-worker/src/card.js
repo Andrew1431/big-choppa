@@ -56,14 +56,14 @@ export function renderCard(stats, { updated = new Date(), error = false } = {}) 
     [v(distance, s.distance_m), 'flown'],
     [v(duration, s.air_s), 'in the air'],
     [v(n => `${num(n)} m`, s.max_altitude_m), 'highest altitude'],
-    [v(n => `${num(n)} km/h`, s.top_speed_kmh), 'top speed'],
+    [error ? '—' : `${num(s.landed ?? 0)} · ${num(s.ended_abruptly ?? 0)}`, 'landed · ended abruptly'],
     [error ? '—' : `${num(s.rolls ?? 0)} · ${num(s.loops ?? 0)}`, 'barrel rolls · loops'],
     [v(num, s.jumped_out), 'jumped out mid-air'],
   ];
   const hhmm = updated.toISOString().slice(11, 16);
   const footer = error
     ? "The logbook is napping. Back soon."
-    : `${num(s.ended_abruptly ?? 0)} flights ended abruptly  ·  updated ${hhmm} UTC`;
+    : `Everyone's flights added together  ·  updated ${hhmm} UTC`;
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" role="img" aria-label="Big Choppa Pilot's Logbook stats">
   <defs>

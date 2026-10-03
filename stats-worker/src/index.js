@@ -16,6 +16,7 @@ SELECT
   sum(if(event = 'flight_ended', toFloat(properties.rolls), 0)) AS rolls,
   sum(if(event = 'flight_ended', toFloat(properties.loops), 0)) AS loops,
   countIf(event = 'jumped_out') AS jumped_out,
+  countIf(event = 'flight_ended' AND properties.how = 'landed') AS landed,
   countIf(event = 'flight_ended' AND properties.how = 'ended abruptly') AS ended_abruptly,
   countIf(event = 'choppa_spawned') AS spawned
 FROM events
