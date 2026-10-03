@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -10,8 +11,17 @@ public class Helicopter : MonoBehaviour
 {
     public Helicopter(IntPtr ptr) : base(ptr) { }
 
+    public const int SeatCount = 3; // 0 = pilot, 1-2 = rear bench
+
+    public uint Id;
+    public uint Owner;      // player netId whose PC simulates this choppa
+    public bool IsProxy;    // true = someone else simulates it; we just replay their snapshots
+    public uint[] Occupants = new uint[SeatCount];
+
     public Rigidbody Body;
-    public Transform MainRotor, TailRotor, PilotSeat, ExitPoint;
+    public Transform MainRotor, TailRotor;
+    public Transform[] Seats, Exits;
+    public Transform PilotSeat => Seats[0];
     public Transform[] Pupils;
     public Vector3[] PupilRest;
 
@@ -32,9 +42,9 @@ public class Helicopter : MonoBehaviour
 
     public float HoverCollective => 1f / Mathf.Max(0.01f, ChoppaConfig.MaxLiftG.Value);
 
-    public static Helicopter Build(Vector3 position, Quaternion rotation, int layer, Scene scene)
+    public static Helicopter Build(uint id, Vector3 position, Quaternion rotation, int layer, Scene scene)
     {
-        var root = new GameObject("BigChoppa");
+        var root = new GameObject($"BigChoppa {id:X8}");
         if (scene.IsValid() && scene.isLoaded) SceneManager.MoveGameObjectToScene(root, scene);
         root.transform.SetPositionAndRotation(position, rotation);
 
@@ -46,15 +56,16 @@ public class Helicopter : MonoBehaviour
         body.linearDamping = 0f;
 
         var heli = root.AddComponent<Helicopter>();
+        heli.Id = id;
         heli.Body = body;
         heli.impactGraceUntil = Time.time + 1.5f;
         HeliModel.Build(heli, ChoppaConfig.HeliScale.Value);
         foreach (var t in root.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = layer;
         ChoppaPhysics.CollideWithEverything(root);
 
-        // Low centre of mass so it sits on its skids instead of toppling.
+        // Pivot roughly mid-cabin: low enough to sit on its skids, high enough to swing from the rotor.
         body.automaticCenterOfMass = false;
-        body.centerOfMass = new Vector3(0f, 0.6f, 0f) * ChoppaConfig.HeliScale.Value;
+        body.centerOfMass = new Vector3(0f, ChoppaConfig.CenterOfMassHeight.Value, 0.1f) * ChoppaConfig.HeliScale.Value;
         return heli;
     }
 
@@ -62,6 +73,7 @@ public class Helicopter : MonoBehaviour
     {
         if (Body == null || Broken) return;
         float dt = Time.fixedDeltaTime;
+        if (IsProxy) { ProxyStep(dt); return; }
 
         // Velocity here is the result of last physics step, so a big jump means we just hit something hard.
         Vector3 vNow = Body.linearVelocity;
@@ -147,6 +159,125 @@ public class Helicopter : MonoBehaviour
         }
         return false;
     }
+
+    // ---------- networking ----------
+
+    struct Snap
+    {
+        public double T;
+        public Vector3 Pos, Vel, AngVel;
+        public Quaternion Rot;
+        public float Spin, Collective;
+    }
+
+    readonly List<Snap> snaps = new();
+
+    public void SetProxy(bool proxy)
+    {
+        if (proxy == IsProxy) return;
+        IsProxy = proxy;
+        if (proxy)
+        {
+            Body.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
+            Body.isKinematic = true;
+            snaps.Clear();
+            snaps.Add(new Snap { T = ChoppaNet.Time - ChoppaConfig.NetInterpDelay.Value, Pos = Body.position, Rot = Body.rotation, Spin = RotorSpin, Collective = Collective });
+        }
+        else
+        {
+            Body.isKinematic = false;
+            Body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            if (snaps.Count > 0)
+            {
+                var last = snaps[snaps.Count - 1];
+                Body.linearVelocity = last.Vel;
+                Body.angularVelocity = last.AngVel;
+            }
+            snaps.Clear();
+            ClearImpactHistory();
+        }
+    }
+
+    public void WriteState(System.IO.BinaryWriter w)
+    {
+        w.Write(Id);
+        w.Write(ChoppaNet.Time);
+        w.Write(Body.position);
+        w.Write(Body.rotation);
+        w.Write(Body.linearVelocity);
+        w.Write(Body.angularVelocity);
+        w.Write((byte)Mathf.RoundToInt(RotorSpin * 255f));
+        w.Write((byte)Mathf.RoundToInt(Collective * 255f));
+    }
+
+    // Reads everything after the id.
+    public void ReadState(System.IO.BinaryReader r)
+    {
+        var s = new Snap
+        {
+            T = r.ReadDouble(),
+            Pos = r.ReadVector3(),
+            Rot = r.ReadQuaternion(),
+            Vel = r.ReadVector3(),
+            AngVel = r.ReadVector3(),
+            Spin = r.ReadByte() / 255f,
+            Collective = r.ReadByte() / 255f,
+        };
+        if (!IsProxy) return;
+
+        int i = snaps.Count;
+        while (i > 0 && snaps[i - 1].T > s.T) i--;
+        if (i > 0 && snaps[i - 1].T == s.T) return;
+        snaps.Insert(i, s);
+        while (snaps.Count > 32) snaps.RemoveAt(0);
+    }
+
+    // Snapshot interpolation: show where the owner had it InterpolationDelay seconds ago, extrapolating
+    // briefly with the last known velocity if updates run late.
+    void ProxyStep(float dt)
+    {
+        if (snaps.Count == 0) return;
+        double t = ChoppaNet.Time - ChoppaConfig.NetInterpDelay.Value;
+
+        while (snaps.Count > 2 && snaps[1].T <= t) snaps.RemoveAt(0);
+
+        Snap a = snaps[0];
+        Vector3 pos; Quaternion rot; Vector3 vel;
+        if (snaps.Count >= 2 && t >= a.T)
+        {
+            Snap b = snaps[1];
+            float f = (float)((t - a.T) / Math.Max(1e-4, b.T - a.T));
+            if (f <= 1f)
+            {
+                pos = Vector3.LerpUnclamped(a.Pos, b.Pos, f);
+                rot = Quaternion.Slerp(a.Rot, b.Rot, f);
+                vel = Vector3.Lerp(a.Vel, b.Vel, f);
+                RotorSpin = Mathf.Lerp(a.Spin, b.Spin, f);
+                Collective = Mathf.Lerp(a.Collective, b.Collective, f);
+            }
+            else Extrapolate(b, t, out pos, out rot, out vel);
+        }
+        else if (t >= a.T) Extrapolate(a, t, out pos, out rot, out vel);
+        else { pos = a.Pos; rot = a.Rot; vel = a.Vel; RotorSpin = a.Spin; Collective = a.Collective; }
+
+        Body.MovePosition(pos);
+        Body.MoveRotation(rot);
+
+        smoothedAccel = Vector3.Lerp(smoothedAccel, (vel - lastVelocity) / dt, 0.2f);
+        lastVelocity = vel;
+    }
+
+    void Extrapolate(Snap s, double t, out Vector3 pos, out Quaternion rot, out Vector3 vel)
+    {
+        float ahead = Mathf.Min((float)(t - s.T), 0.25f);
+        pos = s.Pos + s.Vel * ahead;
+        rot = Quaternion.AngleAxis(s.AngVel.magnitude * Mathf.Rad2Deg * ahead, s.AngVel.sqrMagnitude > 1e-8f ? s.AngVel.normalized : Vector3.up) * s.Rot;
+        vel = s.Vel;
+        RotorSpin = s.Spin;
+        Collective = s.Collective;
+    }
+
+    public Vector3 Velocity => IsProxy ? lastVelocity : Body.linearVelocity;
 
     // Call after teleporting so the sudden velocity change isn't mistaken for a crash.
     public void ClearImpactHistory()

@@ -6,11 +6,21 @@ namespace BigChoppa;
 // Turns the choppa into a pile of bouncing toy parts. The rotors come off whole and keep spinning.
 internal static class ChoppaCrash
 {
-    public static void Break(Helicopter heli)
+    // Same seed on every PC so everyone sees roughly the same pieces fly the same way.
+    public static void Break(Helicopter heli, int seed)
+    {
+        var saved = Random.state;
+        Random.InitState(seed);
+        try { BreakSeeded(heli); }
+        finally { Random.state = saved; }
+    }
+
+    static void BreakSeeded(Helicopter heli)
     {
         var model = heli.transform.Find("Model");
         Vector3 velocity = heli.ImpactVelocity;
-        Vector3 center = heli.Body.worldCenterOfMass;
+        heli.Body.isKinematic = true; // stop a proxy's interpolation fighting the debris
+        Vector3 center = heli.transform.TransformPoint(heli.Body.centerOfMass);
         float s = ChoppaConfig.HeliScale.Value;
         float life = ChoppaConfig.DebrisSeconds.Value;
 

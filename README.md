@@ -43,7 +43,14 @@ All keys and tuning values are in `BepInEx\config\com.ryan1.bigwalk.bigchoppa.cf
 
 ## Multiplayer status
 
-Local only. Each player with the mod spawns their own choppa. Other players see your character flying around in a sitting pose, but not the choppa.
+Shared. Everyone in the lobby, host included, needs the mod (a host without it may kick a modded client on join).
+
+- Choppas, their seats and crashes are shared. Each choppa has 3 seats: the pilot plus a two-person rear bench. Press G next to a choppa to take the pilot seat if it's free, otherwise a bench seat.
+- The PC of whoever last took the pilot seat simulates that choppa and streams its position; everyone else sees a smoothed copy (`Networking.InterpolationDelay`).
+- Crashes break every copy apart and stun anyone sitting in it or standing within `StunRadius`, on their own PC.
+- If a choppa's owner leaves, the host takes it over.
+- One parked choppa per player: F8 replaces yours if nobody is in it.
+- Messages ride on the game's Mirror connection under a custom message id; nothing extra to open or forward.
 
 ## Files
 
@@ -53,5 +60,7 @@ Local only. Each player with the mod spawns their own choppa. Other players see 
 - `Helicopter.cs`: flight model and rotor/eye animation
 - `HeliModel.cs`: the primitive-built model
 - `ChoppaMaterials.cs`: URP-compatible materials
-- `ChoppaManager.cs`: local player lookup, spawn, boarding, camera, HUD, crash handling
+- `ChoppaManager.cs`: local player lookup, choppa list sync, boarding/seats, camera, HUD, crash handling
+- `ChoppaNet.cs`: raw Mirror transport, handshake, offline loopback
+- `ChoppaServer.cs`: host-side authority (spawns, seats, ownership, relaying)
 - `ChoppaCrash.cs`: break-apart debris

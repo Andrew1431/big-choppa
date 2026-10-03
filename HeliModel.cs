@@ -32,7 +32,7 @@ internal static class HeliModel
             Part(model, PrimitiveType.Cylinder, "Strut", new(x, 0.32f, -0.6f), Vector3.zero, new(0.1f, 0.2f, 0.1f), Grey, false);
         }
 
-        // Seats: pilot up front, a bench behind for (future) passengers.
+        // Seats: pilot up front, a two-person bench behind.
         Part(model, PrimitiveType.Cube, "PilotSeat", new(0f, 1.55f, 0.1f), Vector3.zero, new(0.9f, 0.3f, 0.7f), Blue, false);
         Part(model, PrimitiveType.Cube, "PilotBack", new(0f, 1.95f, -0.25f), new(-10f, 0f, 0f), new(0.9f, 0.8f, 0.15f), Blue, false);
         Part(model, PrimitiveType.Cube, "Bench", new(0f, 1.55f, -0.75f), Vector3.zero, new(1.8f, 0.3f, 0.6f), Blue, false);
@@ -81,9 +81,19 @@ internal static class HeliModel
         heli.PupilRest = rest.ToArray();
 
         // Anchors (children of the scaled model so they track scale).
-        heli.PilotSeat = Anchor(model, "PilotAnchor",
-            new(0f, 1.7f + ChoppaConfig.SeatHeightOffset.Value, 0.1f + ChoppaConfig.SeatForwardOffset.Value));
-        heli.ExitPoint = Anchor(model, "ExitAnchor", new(-2.2f, 0.3f, 0.3f));
+        float sy = 1.7f + ChoppaConfig.SeatHeightOffset.Value, sz = ChoppaConfig.SeatForwardOffset.Value;
+        heli.Seats = new[]
+        {
+            Anchor(model, "PilotAnchor", new(0f, sy, 0.1f + sz)),
+            Anchor(model, "BenchLeftAnchor", new(-0.45f, sy, -0.75f + sz)),
+            Anchor(model, "BenchRightAnchor", new(0.45f, sy, -0.75f + sz)),
+        };
+        heli.Exits = new[]
+        {
+            Anchor(model, "PilotExit", new(-2.2f, 0.3f, 0.3f)),
+            Anchor(model, "BenchLeftExit", new(-2.2f, 0.3f, -0.9f)),
+            Anchor(model, "BenchRightExit", new(2.2f, 0.3f, -0.9f)),
+        };
     }
 
     static Transform Anchor(Transform parent, string name, Vector3 localPos)

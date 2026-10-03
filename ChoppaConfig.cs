@@ -18,7 +18,7 @@ internal static class ChoppaConfig
     // Flight
     public static ConfigEntry<float> MaxLiftG, CollectiveRate, MaxPitchRollRate, YawRate, ControlResponse;
     public static ConfigEntry<float> MouseSmoothing, AutoLevel, Weathervane, SpinUpSeconds;
-    public static ConfigEntry<float> ForwardDrag, SideDrag, VerticalDrag, LinearDrag, Mass;
+    public static ConfigEntry<float> ForwardDrag, SideDrag, VerticalDrag, LinearDrag, Mass, CenterOfMassHeight;
     public static ConfigEntry<bool> CollectiveSpringBack, HoverTiltCompensation;
     public static ConfigEntry<float> CollectiveReturnRate;
 
@@ -32,6 +32,10 @@ internal static class ChoppaConfig
     public static ConfigEntry<bool> SitWhileFlying;
     public static ConfigEntry<int> ChoppaLayer;
 
+    // Networking
+    public static ConfigEntry<bool> NetEnabled;
+    public static ConfigEntry<float> NetSendRate, NetInterpDelay;
+
     // Debug
     public static ConfigEntry<bool> ShowHud, VerboseLogging;
 
@@ -42,13 +46,13 @@ internal static class ChoppaConfig
         CollectiveDownKey = cfg.Bind(c, "CollectiveDown", KeyCode.S, "Hold to lower collective (less lift).");
         PedalLeftKey = cfg.Bind(c, "PedalLeft", KeyCode.A, "Left anti-torque pedal (yaw left).");
         PedalRightKey = cfg.Bind(c, "PedalRight", KeyCode.D, "Right anti-torque pedal (yaw right).");
-        SpawnKey = cfg.Bind(c, "Spawn", KeyCode.F8, "Spawn your choppa in front of you (moves it if it already exists).");
+        SpawnKey = cfg.Bind(c, "Spawn", KeyCode.F8, "Spawn a choppa in front of you (replaces your previous one if nobody is in it).");
         EnterExitKey = cfg.Bind(c, "EnterExit", KeyCode.G, "Board or leave the choppa.");
         ResetKey = cfg.Bind(c, "ResetUpright", KeyCode.F9, "Flip the choppa back upright where it is.");
         CameraKey = cfg.Bind(c, "ToggleCamera", KeyCode.V, "Switch between chase and cockpit camera.");
         FreeLookKey = cfg.Bind(c, "FreeLook", KeyCode.LeftAlt, "Hold to look around with the mouse instead of flying with it.");
         HudKey = cfg.Bind(c, "ToggleHud", KeyCode.F10, "Show/hide the flight HUD.");
-        MouseSensitivity = cfg.Bind(c, "MouseSensitivity", 0.6f, "Degrees of pitch/roll per unit of mouse movement. Mouse forward = nose down, mouse left = roll left.");
+        MouseSensitivity = cfg.Bind(c, "MouseSensitivity", 0.3f, "Degrees of pitch/roll per unit of mouse movement. Mouse forward = nose down, mouse left = roll left.");
         InvertPitch = cfg.Bind(c, "InvertPitch", false, "Swap mouse forward/back for pitch.");
         InvertRoll = cfg.Bind(c, "InvertRoll", false, "Swap mouse left/right for roll.");
         Backend = cfg.Bind(c, "InputBackend", InputBackend.Auto, "Where to read keys/mouse from. Auto tries the game's Rewired input first, then Unity's legacy Input.");
@@ -69,6 +73,7 @@ internal static class ChoppaConfig
         VerticalDrag = cfg.Bind(f, "VerticalDrag", 0.04f, "Quadratic drag up/down.");
         LinearDrag = cfg.Bind(f, "LinearDrag", 0.15f, "Low-speed drag in all directions (stops endless drifting).");
         Mass = cfg.Bind(f, "Mass", 600f, "Rigidbody mass. Mostly affects how it shoves things it bumps into.");
+        CenterOfMassHeight = cfg.Bind(f, "CenterOfMassHeight", 1.4f, "Height (m, before Scale) of the point the choppa pivots around. Higher = swings like it hangs from the rotor; lower = tips like a bottom-heavy toy.");
         CollectiveSpringBack = cfg.Bind(f, "CollectiveSpringBack", true, "Release W/S and the collective returns to hover (or to idle when sitting on the ground). Off = it stays where you leave it.");
         CollectiveReturnRate = cfg.Bind(f, "CollectiveReturnRate", 1.0f, "How fast the collective springs back when released (fraction of full range per second).");
         HoverTiltCompensation = cfg.Bind(f, "HoverTiltCompensation", true, "Spring-back point adds a bit of lift when tilted so forward flight roughly holds altitude.");
@@ -90,6 +95,11 @@ internal static class ChoppaConfig
         CockpitEyeHeight = cfg.Bind(m, "CockpitEyeHeightOffset", 0.0f, "Nudge the cockpit camera up/down.");
         SitWhileFlying = cfg.Bind(m, "SitWhileFlying", true, "Ask the game to put your character in its sitting pose while flying.");
         ChoppaLayer = cfg.Bind(m, "PhysicsLayer", -1, "Unity layer for the choppa's colliders. -1 = auto-detect one that collides with the ground (see LogOutput.log).");
+
+        const string n = "Networking";
+        NetEnabled = cfg.Bind(n, "Enabled", true, "Share choppas with other players. Everyone in the lobby (host included) needs the mod; a host without it may kick you when you join.");
+        NetSendRate = cfg.Bind(n, "SendRate", 20f, "Position updates per second sent for a choppa you're flying.");
+        NetInterpDelay = cfg.Bind(n, "InterpolationDelay", 0.15f, "Seconds other players' choppas are shown in the past so their motion stays smooth. Raise if they stutter.");
 
         const string d = "Debug";
         ShowHud = cfg.Bind(d, "ShowHud", true, "Show the flight HUD while flying.");

@@ -38,3 +38,9 @@ Thumbs.db
 
 # Thunderstore package output
 *.zip
+
+# Local deploy targets
+remote-targets.txt
+
+# Personal dev notes
+*.local.md
