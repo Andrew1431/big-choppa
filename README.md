@@ -40,6 +40,7 @@ All keys and tuning values are in `BepInEx\config\com.andrew1431.bigchoppa.cfg`.
 
 - `Controls.MouseSensitivity`, `InvertPitch`, `InvertRoll`
 - `Flight.AutoLevel` (0 = Arma-like; 0.3 = friendlier), `ControlResponse`, `YawRate`, `MaxLiftG`, drags
+- `Lights.HeadlightIntensity`, `HeadlightRange`, `HeadlightAngle`, `HeadlightTilt`, `CabinGlow`
 - `Model.Scale`, `SeatHeightOffset`, `SeatForwardOffset`, `SitWhileFlying`
 - `Debug.VerboseLogging` shows raw mouse values on the HUD and logs seating/camera details to `BepInEx\LogOutput.log`
 
@@ -62,6 +63,7 @@ Shared. Everyone in the lobby, host included, needs the mod (a host without it m
 - `Helicopter.cs`: flight model and rotor/eye animation
 - `HeliModel.cs`: the primitive-built model
 - `ChoppaMaterials.cs`: URP-compatible materials
+- `ChoppaLights.cs`: nav lights, beacons, strobes, headlight, cabin glow
 - `ChoppaManager.cs`: local player lookup, choppa list sync, boarding/seats, camera, HUD, crash handling
 - `ChoppaNet.cs`: raw Mirror transport, handshake, offline loopback
 - `ChoppaServer.cs`: host-side authority (spawns, seats, ownership, relaying)

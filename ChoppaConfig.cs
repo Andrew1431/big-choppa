@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
 using BepInEx.Configuration;
 using UnityEngine;
 
@@ -32,6 +35,9 @@ internal static class ChoppaConfig
     public static ConfigEntry<bool> SitWhileFlying;
     public static ConfigEntry<int> ChoppaLayer;
 
+    // Lights
+    public static ConfigEntry<float> HeadlightIntensity, HeadlightRange, HeadlightAngle, HeadlightTilt, GlowIntensity;
+
     // Audio
     public static ConfigEntry<float> AudioVolume, AudioMaxDistance;
 
@@ -45,6 +51,12 @@ internal static class ChoppaConfig
 
     // Debug
     public static ConfigEntry<bool> ShowHud, VerboseLogging;
+#if DEVBUILD
+    public static ConfigEntry<bool> DevAutoHost;
+#endif
+
+    // Bump when adding a migration below.
+    const int CurrentConfigVersion = 1;
 
     public static void Bind(ConfigFile cfg)
     {
@@ -80,7 +92,7 @@ internal static class ChoppaConfig
         VerticalDrag = cfg.Bind(f, "VerticalDrag", 0.04f, "Quadratic drag up/down.");
         LinearDrag = cfg.Bind(f, "LinearDrag", 0.15f, "Low-speed drag in all directions (stops endless drifting).");
         Mass = cfg.Bind(f, "Mass", 600f, "Rigidbody mass. Mostly affects how it shoves things it bumps into.");
-        CenterOfMassHeight = cfg.Bind(f, "CenterOfMassHeight", 1.4f, "Height (m, before Scale) of the point the choppa pivots around. Higher = swings like it hangs from the rotor; lower = tips like a bottom-heavy toy.");
+        CenterOfMassHeight = cfg.Bind(f, "CenterOfMassHeight", 1.8f, "Height (m, before Scale) of the point the choppa pivots around. Higher = swings like it hangs from the rotor; lower = tips like a bottom-heavy toy.");
         CollectiveSpringBack = cfg.Bind(f, "CollectiveSpringBack", true, "Release W/S and the collective returns to hover (or to idle when sitting on the ground). Off = it stays where you leave it.");
         CollectiveReturnRate = cfg.Bind(f, "CollectiveReturnRate", 1.0f, "How fast the collective springs back when released (fraction of full range per second).");
         HoverTiltCompensation = cfg.Bind(f, "HoverTiltCompensation", true, "Spring-back point adds a bit of lift when tilted so forward flight roughly holds altitude.");
@@ -103,6 +115,13 @@ internal static class ChoppaConfig
         SitWhileFlying = cfg.Bind(m, "SitWhileFlying", true, "Ask the game to put your character in its sitting pose while flying.");
         ChoppaLayer = cfg.Bind(m, "PhysicsLayer", -1, "Unity layer for the choppa's colliders. -1 = auto-detect one that collides with the ground (see LogOutput.log).");
 
+        const string li = "Lights";
+        HeadlightIntensity = cfg.Bind(li, "HeadlightIntensity", 1f, "Headlight brightness. Small changes go a long way. 0 = off.");
+        HeadlightRange = cfg.Bind(li, "HeadlightRange", 250f, "How far the headlight reaches (metres).");
+        HeadlightAngle = cfg.Bind(li, "HeadlightAngle", 40f, "Width of the headlight cone (degrees).");
+        HeadlightTilt = cfg.Bind(li, "HeadlightTilt", 6f, "How far the headlight points below the nose (degrees).");
+        GlowIntensity = cfg.Bind(li, "CabinGlow", 2f, "Faint always-on cabin light so a choppa is visible in the dark. 0 = off.");
+
         const string a = "Audio";
         AudioVolume = cfg.Bind(a, "Volume", 0.8f, "Choppa sound volume (rotor, motor, bonks). 0 = silent.");
         AudioMaxDistance = cfg.Bind(a, "MaxHearingDistance", 250f, "How far away you can hear a choppa (metres).");
@@ -119,5 +138,67 @@ internal static class ChoppaConfig
         const string d = "Debug";
         ShowHud = cfg.Bind(d, "ShowHud", true, "Show the flight HUD while flying.");
         VerboseLogging = cfg.Bind(d, "VerboseLogging", false, "Log extra detail to LogOutput.log and show a network status line on screen.");
+
+#if DEVBUILD
+        DevAutoHost = cfg.Bind("Dev", "AutoHost", false, "Dev builds only: click through the menus and host your most recent save on launch. Hold Shift during startup to skip.");
+#endif
+
+        Migrate(cfg);
+    }
+
+    // Edits to the .cfg (by hand or a mod manager's config editor) apply without restarting. Most settings are read
+    // every frame; ones used when a choppa is built (model, seats) apply to the next spawn.
+    static ConfigFile file;
+    static FileSystemWatcher watcher;
+    static long lastChangeMs = -1;
+
+    public static void WatchForEdits(ConfigFile cfg)
+    {
+        file = cfg;
+        try
+        {
+            watcher = new FileSystemWatcher(Path.GetDirectoryName(cfg.ConfigFilePath), Path.GetFileName(cfg.ConfigFilePath))
+            {
+                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.FileName,
+            };
+            // Fires on a worker thread; the reload itself happens in Tick on the main thread.
+            watcher.Changed += (_, _) => lastChangeMs = Environment.TickCount64;
+            watcher.Created += (_, _) => lastChangeMs = Environment.TickCount64;
+            watcher.Renamed += (_, _) => lastChangeMs = Environment.TickCount64;
+            watcher.EnableRaisingEvents = true;
+        }
+        catch (Exception e) { Plugin.L.LogWarning($"Config live reload unavailable: {e.Message}"); }
+    }
+
+    public static void Tick()
+    {
+        long changed = lastChangeMs;
+        if (changed < 0 || Environment.TickCount64 - changed < 300) return; // editors often write in several steps
+        lastChangeMs = -1;
+        bool save = file.SaveOnConfigSet;
+        file.SaveOnConfigSet = false; // don't rewrite the file we're reading
+        try { file.Reload(); Plugin.L.LogInfo("Config reloaded from disk."); }
+        catch (Exception e) { Plugin.L.LogWarning($"Config reload failed: {e.Message}"); }
+        finally { file.SaveOnConfigSet = save; }
+    }
+
+    // Existing .cfg files keep their saved values, so a changed default only reaches fresh installs. Each migration moves
+    // a setting to its new default if it still holds the old one (i.e. the player never touched it).
+    static void Migrate(ConfigFile cfg)
+    {
+        var version = cfg.Bind("Internal", "ConfigVersion", 0, "Used to apply updated defaults when the mod updates. Don't edit.");
+        int from = version.Value;
+        if (from >= CurrentConfigVersion) return;
+
+        if (from < 1) Upgrade(CenterOfMassHeight, 1.4f);
+
+        version.Value = CurrentConfigVersion;
+    }
+
+    static void Upgrade<T>(ConfigEntry<T> entry, T oldDefault)
+    {
+        if (!EqualityComparer<T>.Default.Equals(entry.Value, oldDefault)) return;
+        entry.Value = (T)entry.DefaultValue;
+        Plugin.L.LogInfo($"Config: {entry.Definition} updated to new default {entry.Value} (was the old default {oldDefault}).");
     }
 }

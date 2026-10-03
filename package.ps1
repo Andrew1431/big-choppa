@@ -18,9 +18,11 @@ if ($pluginSource -notmatch "PluginVersion = `"$([regex]::Escape($version))`"") 
 }
 if (-not (Test-Path (Join-Path $ts 'icon.png'))) { & (Join-Path $ts 'make-icon.ps1') }
 
-& (Join-Path $root 'build.ps1') -GameDirectory $GameDirectory
+& (Join-Path $root 'build.ps1') -GameDirectory $GameDirectory -Publish
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 $dll = Join-Path $root 'bin\Release\net6.0\BigChoppa.dll'
+# Belt and braces: dev-only code (DEVBUILD) must never ship.
+if ([IO.File]::ReadAllText($dll).Contains('DevAutoHost')) { throw "BigChoppa.dll contains dev-only code; it was built without -Publish." }
 
 $staging = Join-Path $root 'dist\staging'
 if (Test-Path $staging) { Remove-Item -Recurse -Force $staging }

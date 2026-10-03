@@ -5,7 +5,9 @@ param(
     # Never the Default profile: that one runs the published Thunderstore version.
     [string]$BepInExDirectory,
     # Also copy the BepInEx loader itself (from this machine's install) to every remote target.
-    [switch]$InstallBepInEx
+    [switch]$InstallBepInEx,
+    # Leave out dev-only code (auto-host etc.). package.ps1 passes this; never ship a build without it.
+    [switch]$Publish
 )
 
 $ErrorActionPreference = 'Stop'
@@ -42,6 +44,7 @@ $arguments = @(
     "--property:InteropDir=$interopDirectory",
     "--property:GamePluginDir=$pluginDirectory"
 )
+if (-not $Publish) { $arguments += '--property:DevBuild=true' }
 
 & dotnet @arguments
 if ($LASTEXITCODE -ne 0) {

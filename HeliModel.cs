@@ -88,6 +88,8 @@ internal static class HeliModel
             Anchor(model, "BenchLeftAnchor", new(-0.45f, sy, -0.75f + sz)),
             Anchor(model, "BenchRightAnchor", new(0.45f, sy, -0.75f + sz)),
         };
+        heli.Lights = ChoppaLights.Build(model, heli.Id);
+
         heli.Exits = new[]
         {
             Anchor(model, "PilotExit", new(-2.2f, 0.3f, 0.3f)),
@@ -104,7 +106,7 @@ internal static class HeliModel
         return t;
     }
 
-    static Transform Part(Transform parent, PrimitiveType type, string name, Vector3 pos, Vector3 euler, Vector3 scale, Color color, bool solid)
+    internal static Transform Part(Transform parent, PrimitiveType type, string name, Vector3 pos, Vector3 euler, Vector3 scale, Color color, bool solid)
     {
         var go = GameObject.CreatePrimitive(type);
         go.name = name;

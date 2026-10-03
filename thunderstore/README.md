@@ -36,6 +36,7 @@ Every key and tuning value is in `BepInEx/config/com.andrew1431.bigchoppa.cfg`. 
 Highlights:
 - Controls: `MouseSensitivity`, `InvertPitch`, `InvertRoll`, every key
 - Flight: `AutoLevel`, `ControlResponse`, `YawRate`, `MaxLiftG`, drag values
+- Lights: `HeadlightIntensity`, `HeadlightRange`, `HeadlightAngle`, `CabinGlow`
 - Audio: `Volume`, `MaxHearingDistance`
 
 ## Multiplayer

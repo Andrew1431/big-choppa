@@ -25,6 +25,7 @@ public class Helicopter : MonoBehaviour
     public Transform PilotSeat => Seats[0];
     public Transform[] Pupils;
     public Vector3[] PupilRest;
+    internal ChoppaLights Lights;
 
     public bool EngineOn;
     public float Collective;   // 0..1
@@ -66,7 +67,7 @@ public class Helicopter : MonoBehaviour
         ChoppaAudio.Attach(heli);
         ChoppaBonker.Add(root, 0.9f, 2.5f);
 
-        // Pivot roughly mid-cabin: low enough to sit on its skids, high enough to swing from the rotor.
+        // Pivot about halfway between skids and rotor so mouse pitch/roll turns it around its middle.
         body.automaticCenterOfMass = false;
         body.centerOfMass = new Vector3(0f, ChoppaConfig.CenterOfMassHeight.Value, 0.1f) * ChoppaConfig.HeliScale.Value;
         return heli;
@@ -139,6 +140,8 @@ public class Helicopter : MonoBehaviour
         ChoppaAudio.Drive(this);
         if (MainRotor != null) MainRotor.Rotate(0f, RotorSpin * 900f * dt, 0f, Space.Self);
         if (TailRotor != null) TailRotor.Rotate(RotorSpin * 1600f * dt, 0f, 0f, Space.Self);
+        // Proxies don't know EngineOn, but their synced rotor spin says whether someone's flying.
+        Lights?.Drive(EngineOn || RotorSpin > 0.1f);
 
         // Googly eyes slosh against acceleration.
         if (Pupils != null)

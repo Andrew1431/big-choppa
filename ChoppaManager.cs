@@ -77,7 +77,14 @@ public class ChoppaManager : MonoBehaviour
 
     void Tick()
     {
+        ChoppaConfig.Tick();
+#if DEVBUILD
+        DevAutoHost.Tick();
+#endif
         ChoppaInput.Tick();
+#if DEVBUILD
+        DevTime.Tick();
+#endif
         ChoppaNet.Tick();
         if (!FindLocalPlayer())
         {

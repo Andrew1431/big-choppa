@@ -18,6 +18,7 @@ public sealed class Plugin : BasePlugin
     {
         L = Log;
         ChoppaConfig.Bind(Config);
+        ChoppaConfig.WatchForEdits(Config);
 
         ClassInjector.RegisterTypeInIl2Cpp<Helicopter>();
         ClassInjector.RegisterTypeInIl2Cpp<ChoppaBonker>();

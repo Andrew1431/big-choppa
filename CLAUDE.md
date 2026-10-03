@@ -34,8 +34,21 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
 - `package.ps1` zips the DLL from `bin\Release\net6.0`, not from the install folder.
 - Logs: `LogOutput.log` in whichever BepInEx folder the build used (currently the r2modman Dev profile); a remote target's log is readable at `<unc>\BepInEx\LogOutput.log`.
 - The interop folder only exists after launching the game once with BepInEx.
-- Config file: `BepInEx\config\com.andrew1431.bigchoppa.cfg`. **Changing a default in code doesn't change an
-  existing .cfg**; edit the file too (on every test machine) when a default change should apply.
+- Config file: `BepInEx\config\com.andrew1431.bigchoppa.cfg`. Nobody's .cfg ships with the mod; BepInEx writes it on
+  first load and from then on the saved value wins over the code default.
+- **Changing any config default: stop and ask the developer whether existing players should get the new value.** If
+  yes (a sensible default, not a personal preference), add a migration in `ChoppaConfig.Migrate`: bump
+  `CurrentConfigVersion` and add `if (from < N) Upgrade(Entry, oldDefault);`. It only rewrites the value if it still
+  equals the old default, so players' own tweaks survive. Migrations also update the dev/test machines' configs, so no
+  hand-editing needed. Never rename a key just to force a new default (it throws away people's settings).
+  Every default change also gets a `thunderstore/CHANGELOG.md` line naming `[Section] Key` and the old → new value,
+  so players can switch back.
+- The .cfg is watched and reloaded live (`ChoppaConfig.WatchForEdits`/`Tick`), so read `.Value` at use time rather than
+  caching it when you want a setting to be live-tunable. Values used only at build time apply to the next spawn.
+- Dev-only code goes inside `#if DEVBUILD`. `build.ps1` defines it; `package.ps1` builds with `-Publish`, which
+  doesn't, and refuses to package a DLL containing `DevAutoHost`. Dev-only config entries must be inside the `#if` too, so they never show up in players' configs.
+- `[Dev] AutoHost` (dev builds, default false, set true on this PC only): `DevAutoHost.cs` clicks through the
+  main menu and hosts the most recent save. Hold Shift at startup to skip. Olga leaves it off since she joins as a client.
 - `Debug.VerboseLogging` (default false) adds detail to the log and an on-screen network status line.
 
 ## Versioning and Thunderstore release
@@ -65,6 +78,8 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
 - `Helicopter.cs`: flight model (owner) or snapshot-interpolated kinematic proxy (everyone else).
 - `ChoppaNet.cs` / `ChoppaServer.cs`: networking (see below).
 - `HeliModel.cs`: primitives; seat/exit anchors. `ChoppaCrash.cs`: seeded break-apart.
+- `ChoppaLights.cs`: lamp lenses (unlit, swapped on/off) plus three real lights per choppa: headlight spot, cabin
+  glow (always on), flashing roof beacon. Powered = `EngineOn || RotorSpin > 0.1` so proxies light up too.
 - `ChoppaAudio.cs` / `ChoppaBonker.cs`: procedural audio and collision bonks.
 - `ChoppaLogbook.cs`: "Pilot's Logbook" anonymous usage events sent to PostHog (US region, `/batch/`; the project key is
   write-only and public by design). On by default, opt-out via `[Pilot Logbook] Enabled`. Events: `choppa_spawned`,
@@ -79,6 +94,9 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
   cached 10 min. The PostHog personal API key (read-only query scope) is the Worker secret `POSTHOG_PERSONAL_KEY`;
   it must never go in the repo or chat. `node preview.js` renders the card with fake numbers; `npx wrangler deploy`
   ships it (needs `npx wrangler login` first). New logbook stats on the card need both the query and `card.js` updated.
+- `DevAutoHost.cs`: dev-build-only menu skipper (see Build, deploy, test).
+- `DevTime.cs`: dev-build-only `,` / `.` = time of day -/+ 1 h via Enviro (`EnviroManager.Time.SetTimeOfDay`); falls
+  back to `SkyManager.SetFixedTime` if the game snaps it back.
 - `ChoppaPhysics.cs`: collision-layer fix. `ChoppaInput.cs`: Rewired with Unity Input fallback.
 - `tools/dumper`: Mono.Cecil type dumper for the interop DLLs (excluded from the mod build). Usage:
   `dotnet build tools/dumper/dumper.csproj -o tools/dumper/out` then

@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.3
+
+- Night flying: navigation lights, flashing beacons and strobes while someone's at the controls, a long-reaching
+  headlight, and a faint cabin glow so you can find a parked choppa in the dark. Tune them under `[Lights]`.
+- The choppa now pitches and rolls around its middle instead of near the skids.
+  Config: `[Flight] CenterOfMassHeight` default changed from `1.4` to `1.8`. If you never changed it, it updates
+  automatically; set it back to `1.4` for the old feel.
+
 ## 1.0.2
 
 - Live Pilot's Logbook card at the top of the page: everyone's flight totals added together.

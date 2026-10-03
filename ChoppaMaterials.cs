@@ -7,7 +7,7 @@ namespace BigChoppa;
 // cloning one of the game's own materials, which is guaranteed to be compatible with its pipeline.
 internal static class ChoppaMaterials
 {
-    static readonly Dictionary<Color, Material> cache = new();
+    static readonly Dictionary<Color, Material> cache = new(), glowCache = new();
     static Shader shader;
     static Material template;
     static bool resolved;
@@ -30,6 +30,30 @@ internal static class ChoppaMaterials
         if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", 0.35f);
         mat.color = color;
         cache[color] = mat;
+        return mat;
+    }
+
+    // Lamp lenses: unlit so they read as glowing at night. Falls back to an emissive lit material.
+    public static Material GetGlow(Color color)
+    {
+        if (glowCache.TryGetValue(color, out var existing) && existing != null) return existing;
+        Material mat;
+        var unlit = Shader.Find("Universal Render Pipeline/Unlit");
+        if (unlit != null)
+        {
+            mat = new Material(unlit);
+            mat.SetColor("_BaseColor", color * 1.5f);
+        }
+        else
+        {
+            var lit = Get(color);
+            if (lit == null) return null;
+            mat = new Material(lit);
+            mat.EnableKeyword("_EMISSION");
+            mat.SetColor("_EmissionColor", color * 2f);
+        }
+        mat.name = $"BigChoppa_Glow_{ColorUtility.ToHtmlStringRGB(color)}";
+        glowCache[color] = mat;
         return mat;
     }
 
