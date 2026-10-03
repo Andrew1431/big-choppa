@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <AssemblyName>BigChoppa</AssemblyName>
+    <RootNamespace>BigChoppa</RootNamespace>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <NoWarn>$(NoWarn);CS0618</NoWarn>
+  </PropertyGroup>
+
+  <Target Name="RequireGameDirs" BeforeTargets="ResolveAssemblyReferences"
+          Condition="'$(BepInExCoreDir)' == '' Or '$(InteropDir)' == ''">
+    <Error Text="Set BepInExCoreDir and InteropDir. Use build.ps1 to supply them automatically." />
+  </Target>
+
+  <ItemGroup>
+    <Reference Include="$(BepInExCoreDir)\BepInEx.Core.dll" Private="false" />
+    <Reference Include="$(BepInExCoreDir)\BepInEx.Unity.Common.dll" Private="false" />
+    <Reference Include="$(BepInExCoreDir)\BepInEx.Unity.IL2CPP.dll" Private="false" />
+    <Reference Include="$(BepInExCoreDir)\Il2CppInterop.Runtime.dll" Private="false" />
+    <Reference Include="$(BepInExCoreDir)\Il2CppInterop.Common.dll" Private="false" />
+    <Reference Include="$(InteropDir)\*.dll" Private="false" />
+  </ItemGroup>
+
+  <Target Name="CopyPluginToGame" AfterTargets="Build"
+          Condition="'$(GamePluginDir)' != ''">
+    <MakeDir Directories="$(GamePluginDir)" />
+    <Copy SourceFiles="$(TargetPath)"
+          DestinationFiles="$(GamePluginDir)\$(TargetFileName)" />
+  </Target>
+</Project>
