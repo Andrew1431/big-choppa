@@ -85,6 +85,10 @@ internal static class ChoppaLogbook
     {
         if (!On) return;
         props ??= new();
+#if DEVBUILD
+        // Dev builds never send, so testing doesn't pollute the real stats.
+        Plugin.L.LogInfo($"Logbook (dev, not sent): {evt} {JsonSerializer.Serialize(props)}");
+#else
         props["distinct_id"] = InstallId();
         props["mod_version"] = Plugin.PluginVersion;
         props["$process_person_profile"] = false;
@@ -96,6 +100,7 @@ internal static class ChoppaLogbook
             if (queue.Count > 200) queue.RemoveAt(0);
         }
         Plugin.Verbose($"Logbook: {evt}");
+#endif
     }
 
     static string InstallId()

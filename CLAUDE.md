@@ -72,7 +72,7 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
   latest with `https://thunderstore.io/api/experimental/package/BepInEx/BepInExPack_IL2CPP/`.
 - **Always load-test in the Dev profile before packaging.** A config section named "Pilot's Logbook" once broke
   loading entirely: BepInEx section/key names can't contain `= \n \t \ " ' [ ]`.
-- Published so far: 1.0.0 (no logbook). 1.0.1 adds the Pilot Logbook. 1.0.2 (README stats card only, no code change) is packaged once the card is live. 1.0.3 adds night lights, live config reload and the CenterOfMassHeight migration. 1.1.0 adds choppa pockets (confirmed: the game only saves items players are actively holding, so the pocket warning stays). 1.1.1 adds pocket/crew logbook analytics (no gameplay change).
+- Published so far: 1.0.0 (no logbook). 1.0.1 adds the Pilot Logbook. 1.0.2 (README stats card only, no code change) is packaged once the card is live. 1.0.3 adds night lights, live config reload and the CenterOfMassHeight migration. 1.1.0 adds choppa pockets (confirmed: the game only saves items players are actively holding, so the pocket warning stays). 1.1.1 adds pocket/crew logbook analytics (no gameplay change). 1.1.2 fixes bonk sounds (Collision getters are stripped) and makes dev builds log instead of send logbook events.
 - Bump `ChoppaNet.Protocol` whenever the wire format changes; mismatched peers are ignored by the host.
 
 ## Code map
@@ -94,7 +94,7 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
   with it. The game doesn't save pocketed items; both READMEs and the changelog must keep saying so up front.
 - `ChoppaAudio.cs` / `ChoppaBonker.cs`: procedural audio and collision bonks.
 - `ChoppaLogbook.cs`: "Pilot's Logbook" anonymous usage events sent to PostHog (US region, `/batch/`; the project key is
-  write-only and public by design). On by default, opt-out via `[Pilot Logbook] Enabled`. Events: `choppa_spawned`,
+  write-only and public by design). Dev builds (`DEVBUILD`) never send: they log each event to `LogOutput.log` as `Logbook (dev, not sent): …` instead. On by default, opt-out via `[Pilot Logbook] Enabled`. Events: `choppa_spawned`,
   `choppa_boarded {seat}`, `flight_ended {duration_s, distance_m, max_altitude_m, top_speed_kmh, end_speed_kmh, how: landed|bailed|ended
   abruptly, riders, max_riders, pocket_items, rolls, loops, upside_down_s, cockpit_view_pct}` (pilot only), `ride_ended {duration_s, how: got
   out|jumped out|ended abruptly}` (passengers), `jumped_out {seat, height_m, speed_kmh}` (anyone leaving > 1.5 m up),

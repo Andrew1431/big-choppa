@@ -60,7 +60,8 @@ internal static class ChoppaCrash
             rb.angularVelocity = Random.insideUnitSphere * 12f;
 
             ChoppaPhysics.CollideWithEverything(t.gameObject);
-            ChoppaBonker.Add(t.gameObject, isRotor ? 0.8f : Random.Range(0.1f, 0.6f), 1.2f);
+            // Just a faint clatter so the falling pieces feel real; the big crash bonk does the heavy lifting.
+            ChoppaBonker.Add(t.gameObject, isRotor ? 0.8f : Random.Range(0.1f, 0.6f), 2f, isRotor ? 0.35f : 0.2f, 0.3f);
 
             if (t == heli.MainRotor)
             {

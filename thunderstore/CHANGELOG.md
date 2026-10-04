@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.2
+
+- Fixed: the choppa's bump sounds never played (the game's build strips the part of Unity they relied on). Hard
+  landings now go *bonk*.
+
 ## 1.1.1
 
 - Pilot's Logbook now also notes how many items are in the choppa pockets when a flight ends, the most people

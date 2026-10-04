@@ -81,14 +81,14 @@ internal static class ChoppaAudio
     // ---------- one-shots ----------
 
     // Hollow plastic "bonk". size 0..1: bigger = lower and louder. Used for debris and hard landings.
-    public static void Bonk(AudioSource src, float impactSpeed, float size)
+    public static void Bonk(AudioSource src, float impactSpeed, float size, float volume = 1f)
     {
         float vol = ChoppaConfig.AudioVolume.Value;
         if (vol <= 0f || src == null || !EnsureClips()) return;
         float loud = Mathf.Clamp01((impactSpeed - 0.5f) / 8f);
         if (loud <= 0.02f) return;
         src.pitch = Mathf.Lerp(1.35f, 0.55f, size) * UnityEngine.Random.Range(0.9f, 1.1f);
-        src.PlayOneShot(bonkClips[UnityEngine.Random.Range(0, bonkClips.Length)], vol * loud * Mathf.Lerp(0.6f, 1f, size));
+        src.PlayOneShot(bonkClips[UnityEngine.Random.Range(0, bonkClips.Length)], vol * volume * loud * Mathf.Lerp(0.6f, 1f, size));
     }
 
     public static AudioSource OneShotSource(GameObject go, float minDistance)
