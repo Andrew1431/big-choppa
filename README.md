@@ -4,9 +4,6 @@
 
 A goofy playground-style helicopter for Big Walk with Arma-style flight controls (BepInEx 6 IL2CPP mod).
 
-> **Choppa pockets don't count as "held".** The six side pockets take anything a backpack takes, but the game only
-> saves items players are actively holding. Anything left in a pocket when the game ends isn't kept.
-
 ## Build and install
 
 Close Big Walk, then in PowerShell in this folder:

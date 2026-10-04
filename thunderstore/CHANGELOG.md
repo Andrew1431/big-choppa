@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.4
+
+- Items left in choppa pockets now count as held when the game saves, so they turn up in the lost & found
+  instead of disappearing.
+
 ## 1.1.3
 
 - Free look (hold Left Alt) was far too twitchy. It now has its own setting, `[Controls] FreelookMouseSensitivity`,

@@ -88,7 +88,8 @@ internal sealed class ChoppaPockets
                 box.isTrigger = castTrigger;
 
                 home.pinGroup = acceptGroup;
-                home.isInventory = false;
+                // Counts as "held" for saving, so pocketed items come back in the lost & found.
+                home.isInventory = true;
                 home.saveableHomeName = SaveableHomeName.notSavable;
                 if (placeSound != null) home.propPlaceSoundOverride = placeSound;
                 if (removeSound != null) home.propRemoveSoundOverride = removeSound;
@@ -137,6 +138,10 @@ internal sealed class ChoppaPockets
             if (prop == seen[i]) continue;
             if (seen[i] != null) IgnoreCollisions(seen[i], false);
             if (prop != null) IgnoreCollisions(prop, true);
+#if DEVBUILD
+            if (prop != null) Plugin.L.LogInfo($"Pockets (dev): '{prop.name}' pocketed, isInInventory {prop.isInInventory}, saveType {prop.propSaveType}, ShouldSave {PropInventory.ShouldSave(prop)}.");
+            if (seen[i] != null) Plugin.L.LogInfo($"Pockets (dev): '{seen[i].name}' taken, isInInventory {seen[i].isInInventory}.");
+#endif
             // Only the host logs, so each stow/take in a lobby is counted once (we can't tell who did it).
             if (NetworkServer.active)
             {
@@ -257,6 +262,15 @@ internal sealed class ChoppaPockets
                              $"crosshair target '{Path(target.transform)}' layer {castLayer} ({LayerMask.LayerToName(castLayer)}), trigger {castTrigger}, collider {(col != null ? col.GetIl2CppType().Name : "none")}.");
         }
         catch (Exception e) { Plugin.L.LogWarning($"Pockets: template search failed: {e}"); }
+#if DEVBUILD
+        try
+        {
+            foreach (var h in Resources.FindObjectsOfTypeAll<PropHome>())
+                if (h.isInventory)
+                    Plugin.L.LogInfo($"Pockets (dev): inventory home '{Path(h.transform)}' group {h.pinGroup}, higherPriority {h.inventoryIsHigherPriority}, keepSaved {h.keepSavedWhenLeavingHome}, saveable {h.saveableHomeName}, character {(h.parentCharacter != null)}.");
+        }
+        catch (Exception e) { Plugin.L.LogWarning($"Pockets (dev): inventory home dump failed: {e}"); }
+#endif
     }
 
     static string Path(Transform t)

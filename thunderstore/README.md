@@ -17,7 +17,7 @@ It has three seats, the pilot plus a two-person bench, and everyone in the lobby
 
 Each side of the choppa has three pockets that take anything a backpack takes. Hold an item, look at a pocket and place it like you would in a backpack. Grab it again to take it out.
 
-> **Pocketed items are not "held" items.** When the game saves, it only keeps items players are actively holding. Anything left in a choppa pocket isn't kept, so take your items out before you quit.
+Pocketed items count as held: if you quit with something in a pocket, you'll find it in the lost & found next time.
 
 ## Controls
 
