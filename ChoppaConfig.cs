@@ -16,7 +16,7 @@ internal static class ChoppaConfig
     public static ConfigEntry<float> MouseSensitivity, FreelookMouseSensitivity;
     public static ConfigEntry<bool> InvertPitch, InvertRoll;
     public static ConfigEntry<InputBackend> Backend;
-    public static ConfigEntry<bool> RequireCursorLock;
+    public static ConfigEntry<bool> RequireCursorLock, FlyIn;
 
     // Flight
     public static ConfigEntry<float> MaxLiftG, CollectiveRate, MaxPitchRollRate, YawRate, ControlResponse;
@@ -65,7 +65,8 @@ internal static class ChoppaConfig
         CollectiveDownKey = cfg.Bind(c, "CollectiveDown", KeyCode.S, "Hold to lower collective (less lift).");
         PedalLeftKey = cfg.Bind(c, "PedalLeft", KeyCode.A, "Left anti-torque pedal (yaw left).");
         PedalRightKey = cfg.Bind(c, "PedalRight", KeyCode.D, "Right anti-torque pedal (yaw right).");
-        SpawnKey = cfg.Bind(c, "Spawn", KeyCode.F8, "Spawn a choppa in front of you (replaces your previous one if nobody is in it).");
+        SpawnKey = cfg.Bind(c, "Spawn", KeyCode.F8, "Call in a choppa (replaces your previous one if nobody is in it).");
+        FlyIn = cfg.Bind(c, "FlyIn", true, "The choppa flies in from the distance and lands near you. Off = it appears right in front of you.");
         EnterExitKey = cfg.Bind(c, "EnterExit", KeyCode.G, "Board or leave the choppa.");
         ResetKey = cfg.Bind(c, "ResetUpright", KeyCode.F9, "Flip the choppa back upright where it is.");
         CameraKey = cfg.Bind(c, "ToggleCamera", KeyCode.V, "Switch between chase and cockpit camera.");

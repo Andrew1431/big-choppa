@@ -32,6 +32,7 @@ public class Helicopter : MonoBehaviour
     public float Collective;   // 0..1
     public float RotorSpin;    // 0..1, lift scales with this
     public Vector3 CommandedRates; // deg/s: x = pitch (+ nose down), y = yaw (+ right), z = roll (+ left)
+    public ChoppaAutopilot Autopilot; // flying itself in to land (owner only)
 
     public bool Grounded;
     public bool Broken;
@@ -94,6 +95,7 @@ public class Helicopter : MonoBehaviour
         }
 
         Grounded = CheckGrounded();
+        if (Autopilot != null && !Autopilot.Step(this, dt)) Autopilot = null;
 
         RotorSpin = Mathf.MoveTowards(RotorSpin, EngineOn ? 1f : 0f, dt / Mathf.Max(0.1f, ChoppaConfig.SpinUpSeconds.Value));
         if (!EngineOn) Collective = Mathf.MoveTowards(Collective, 0f, dt * 0.5f);
@@ -115,7 +117,7 @@ public class Helicopter : MonoBehaviour
             Vector3 target = CommandedRates * Mathf.Deg2Rad;
 
             float autoLevel = ChoppaConfig.AutoLevel.Value;
-            if (autoLevel > 0f)
+            if (autoLevel > 0f && Autopilot == null)
             {
                 Vector3 tiltAxis = transform.InverseTransformDirection(Vector3.Cross(transform.up, Vector3.up));
                 target.x += tiltAxis.x * autoLevel * 3f;

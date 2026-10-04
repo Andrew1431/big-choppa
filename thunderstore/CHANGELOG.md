@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Calling a choppa (F8) now has it fly in from the distance and land near you, if there's a flat, open spot
+  nearby. Don't like it? Set `[Controls] FlyIn` to `false` and it appears right in front of you like before.
+
 ## 1.1.4
 
 - Items left in choppa pockets now count as held when the game saves, so they turn up in the lost & found

@@ -266,8 +266,17 @@ public class ChoppaManager : MonoBehaviour
             pendingSpawnId = 0;
             spawnHeli = h;
             ChoppaLogbook.Spawned();
-            spawnY = pos.y;
-            spawnCheckAt = Time.time + 2f;
+            if (pendingFlyIn is { } fly && !h.IsProxy)
+            {
+                h.Autopilot = new ChoppaAutopilot(h, fly.target, fly.cruiseY);
+                Plugin.L.LogInfo($"Choppa {id:X8} flying in to {fly.target} at {fly.cruiseY:0}m.");
+            }
+            else
+            {
+                spawnY = pos.y;
+                spawnCheckAt = Time.time + 2f;
+            }
+            pendingFlyIn = null;
         }
     }
 
@@ -389,13 +398,46 @@ public class ChoppaManager : MonoBehaviour
         if (fwd.sqrMagnitude < 0.01f) fwd = Vector3.forward;
         float s = ChoppaConfig.HeliScale.Value;
 
-        Vector3 pos = root.position + fwd * (6f * s);
-        Collider ground = GroundBelow(pos + Vector3.up * 30f, 80f, out var groundPoint);
-        if (ground != null) pos = groundPoint + Vector3.up * 0.15f;
+        bool flyIn = ChoppaConfig.FlyIn.Value;
+        Vector3 pos;
+        Collider ground;
+        if (flyIn)
+        {
+            if (!FindLandingSpot(root.position, fwd, s, out pos, out ground))
+            {
+                Hint("No safe spot nearby for the choppa to land. Try somewhere flatter and more open.");
+                return;
+            }
+            fwd = Vector3.ProjectOnPlane(pos - root.position, Vector3.up).normalized;
+        }
+        else
+        {
+            pos = root.position + fwd * (6f * s);
+            ground = GroundBelow(pos + Vector3.up * 30f, 80f, out var groundPoint);
+            if (ground != null) pos = groundPoint + Vector3.up * 0.15f;
+        }
         if (choppaLayer < 0) choppaLayer = PickLayer(ground);
 
         // Side-on to the player so they walk up to the pilot's door.
         var rot = Quaternion.LookRotation(Vector3.Cross(Vector3.up, fwd), Vector3.up);
+
+        pendingFlyIn = null;
+        if (flyIn)
+        {
+            // Start out past the landing spot, a little off to one side, so it comes towards the player.
+            var dir = Quaternion.AngleAxis(UnityEngine.Random.Range(-35f, 35f), Vector3.up) * fwd;
+            Vector3 start = pos + dir * FlyInDistance;
+            float top = pos.y;
+            for (int i = 0; i <= 12; i++)
+            {
+                var sample = Vector3.Lerp(pos, start, i / 12f);
+                if (GroundBelow(sample + Vector3.up * 600f, 1200f, out var hit) != null) top = Mathf.Max(top, hit.y);
+            }
+            float cruiseY = top + 30f;
+            pendingFlyIn = (pos, cruiseY);
+            pos = new Vector3(start.x, cruiseY, start.z);
+            rot = Quaternion.LookRotation(-dir, Vector3.up);
+        }
 
         // One parked choppa per player: replace any of ours nobody is sitting in.
         foreach (var h in helis.Values)
@@ -412,6 +454,8 @@ public class ChoppaManager : MonoBehaviour
         ChoppaNet.ToServer(ChoppaNet.Write(Msg.Spawn, w => { w.Write(id); w.Write(pos); w.Write(rot); }), true);
     }
 
+    const float FlyInDistance = 220f;
+    (Vector3 target, float cruiseY)? pendingFlyIn;
     Helicopter spawnHeli;
     float spawnY, spawnCheckAt = -1f;
 
@@ -445,6 +489,49 @@ public class ChoppaManager : MonoBehaviour
             target.ResetUpright();
         }
         else Hint("Get in or next to a choppa you're flying to flip it upright.");
+    }
+
+    // A fairly flat, uncluttered spot 10-18 m from the player with open sky above (so it can fly down to it).
+    // Prefers straight ahead, then sweeps around.
+    bool FindLandingSpot(Vector3 from, Vector3 fwd, float s, out Vector3 spot, out Collider ground)
+    {
+        float[] angles = { 0f, -30f, 30f, -60f, 60f, -90f, 90f, -135f, 135f, 180f };
+        float[] dists = { 12f, 16f, 10f };
+        float radius = 2.4f * s;
+        foreach (float d in dists)
+        foreach (float a in angles)
+        {
+            Vector3 probe = from + Quaternion.AngleAxis(a, Vector3.up) * fwd * (d * s);
+            if (!GroundHit(probe + Vector3.up * 30f, 80f, out var hit)) continue;
+            if (hit.normal.y < Mathf.Cos(18f * Mathf.Deg2Rad)) continue;
+            Vector3 centre = hit.point + Vector3.up * (radius + 0.5f * s);
+            bool blocked = false;
+            foreach (var c in Physics.OverlapSphere(centre, radius, ~0, QueryTriggerInteraction.Ignore))
+                if (c != null && !c.transform.IsChildOf(local.transform)) { blocked = true; break; }
+            if (blocked) continue;
+            if (Physics.SphereCast(centre, radius, Vector3.up, out _, 80f, ~0, QueryTriggerInteraction.Ignore)) continue;
+            spot = hit.point + Vector3.up * 0.15f;
+            ground = hit.collider;
+            return true;
+        }
+        spot = default;
+        ground = null;
+        return false;
+    }
+
+    bool GroundHit(Vector3 origin, float distance, out RaycastHit best)
+    {
+        best = default;
+        bool found = false;
+        foreach (var hit in Physics.RaycastAll(origin, Vector3.down, distance, ~0, QueryTriggerInteraction.Ignore))
+        {
+            var c = hit.collider;
+            if (c == null || (found && hit.distance >= best.distance)) continue;
+            if (c.transform.IsChildOf(local.transform) || c.GetComponentInParent<Helicopter>() != null) continue;
+            best = hit;
+            found = true;
+        }
+        return found;
     }
 
     Collider GroundBelow(Vector3 origin, float distance, out Vector3 point)
