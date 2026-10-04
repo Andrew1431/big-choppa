@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.3
+
+- Free look (hold Left Alt) was far too twitchy. It now has its own setting, `[Controls] FreelookMouseSensitivity`,
+  defaulting to 0.4 (it was effectively 2.0 before; set it back to 2.0 for the old feel).
+
 ## 1.1.2
 
 - Fixed: the choppa's bump sounds never played (the game's build strips the part of Unity they relied on). Hard

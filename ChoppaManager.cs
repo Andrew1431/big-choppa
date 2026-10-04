@@ -744,8 +744,8 @@ public class ChoppaManager : MonoBehaviour
         Vector2 cyclicTarget = Vector2.zero;
         if (freeLook)
         {
-            lookYaw = Mathf.Clamp(lookYaw + mouse.x * 2f, -160f, 160f);
-            lookPitch = Mathf.Clamp(lookPitch - mouse.y * 2f, -70f, 70f);
+            lookYaw = Mathf.Clamp(lookYaw + mouse.x * ChoppaConfig.FreelookMouseSensitivity.Value, -160f, 160f);
+            lookPitch = Mathf.Clamp(lookPitch - mouse.y * ChoppaConfig.FreelookMouseSensitivity.Value, -70f, 70f);
         }
         else
         {

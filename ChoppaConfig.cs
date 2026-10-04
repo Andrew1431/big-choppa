@@ -13,7 +13,7 @@ internal static class ChoppaConfig
     // Controls
     public static ConfigEntry<KeyCode> CollectiveUpKey, CollectiveDownKey, PedalLeftKey, PedalRightKey;
     public static ConfigEntry<KeyCode> SpawnKey, EnterExitKey, ResetKey, CameraKey, FreeLookKey, HudKey;
-    public static ConfigEntry<float> MouseSensitivity;
+    public static ConfigEntry<float> MouseSensitivity, FreelookMouseSensitivity;
     public static ConfigEntry<bool> InvertPitch, InvertRoll;
     public static ConfigEntry<InputBackend> Backend;
     public static ConfigEntry<bool> RequireCursorLock;
@@ -72,6 +72,7 @@ internal static class ChoppaConfig
         FreeLookKey = cfg.Bind(c, "FreeLook", KeyCode.LeftAlt, "Hold to look around with the mouse instead of flying with it.");
         HudKey = cfg.Bind(c, "ToggleHud", KeyCode.F10, "Show/hide the flight HUD.");
         MouseSensitivity = cfg.Bind(c, "MouseSensitivity", 0.3f, "Degrees of pitch/roll per unit of mouse movement. Mouse forward = nose down, mouse left = roll left.");
+        FreelookMouseSensitivity = cfg.Bind(c, "FreelookMouseSensitivity", 0.4f, "Degrees of camera turn per unit of mouse movement while holding the free look key.");
         InvertPitch = cfg.Bind(c, "InvertPitch", false, "Swap mouse forward/back for pitch.");
         InvertRoll = cfg.Bind(c, "InvertRoll", false, "Swap mouse left/right for roll.");
         Backend = cfg.Bind(c, "InputBackend", InputBackend.Auto, "Where to read keys/mouse from. Auto tries the game's Rewired input first, then Unity's legacy Input.");
