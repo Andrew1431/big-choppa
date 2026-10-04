@@ -1,6 +1,6 @@
 // Renders the "Pilot's Logbook" flight-board card. Pure function so preview.js can render it offline.
 
-const W = 800, H = 480;
+const W = 800, H = 580;
 const ink = '#1d2b53', soft = '#5a6b8c';
 const stripes = ['#ff5a5f', '#ffb000', '#2bb673', '#3a86ff'];
 
@@ -49,9 +49,10 @@ const tile = (i, value, label) => {
 
 // Flights per day for the last 7 days, in a white panel under the tiles. daily = [{ day: 'YYYY-MM-DD', flights }].
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const PANEL_Y = 356;
 function chart(daily, error) {
-  const x0 = 24, y0 = 264, w = 752, h = 184;
-  const base = 150, tall = 96, colW = (w - 32) / 7, barW = 50;
+  const x0 = 24, y0 = PANEL_Y, w = 480, h = 184;
+  const base = 150, tall = 96, colW = (w - 32) / 7, barW = 40;
   const days = Array.isArray(daily) && daily.length ? daily : [];
   const max = Math.max(1, ...days.map(d => d.flights));
   const bars = days.map((d, i) => {
@@ -60,7 +61,7 @@ function chart(daily, error) {
     const label = i === days.length - 1 ? 'Today' : DAYS[new Date(`${d.day}T00:00:00Z`).getUTCDay()];
     const color = stripes[i % 4];
     // Glossy highlight stripe, like a Wii menu button; skipped on stubby bars where it would just be a dot.
-    const shine = bh > 28 ? `<rect x="${x + 7}" y="${base - bh + 6}" width="9" height="${bh - 16}" rx="4.5" fill="#fff" opacity="0.35"/>` : '';
+    const shine = bh > 28 ? `<rect x="${x + 6}" y="${base - bh + 6}" width="9" height="${bh - 16}" rx="4.5" fill="#fff" opacity="0.35"/>` : '';
     const bar = bh > 0
       ? `<rect x="${x}" y="${base - bh}" width="${barW}" height="${bh}" rx="10" fill="${color}"/>${shine}`
       : `<rect x="${x}" y="${base - 6}" width="${barW}" height="6" rx="3" fill="#dfe7f2"/>`;
@@ -78,6 +79,49 @@ function chart(daily, error) {
   </g>`;
 }
 
+// Share of flights by how many were aboard (most at once), as a donut with a labelled legend.
+const CREW = [['solo', '#3a86ff'], ['2 aboard', '#e08a00'], ['3 aboard', '#2bb673']];
+function arc(cx, cy, r0, r1, a0, a1) {
+  const p = (r, a) => `${(cx + r * Math.sin(a)).toFixed(2)} ${(cy - r * Math.cos(a)).toFixed(2)}`;
+  const big = a1 - a0 > Math.PI ? 1 : 0;
+  return `M${p(r1, a0)} A${r1} ${r1} 0 ${big} 1 ${p(r1, a1)} L${p(r0, a1)} A${r0} ${r0} 0 ${big} 0 ${p(r0, a0)} Z`;
+}
+function crewPie(counts, error) {
+  const x0 = 520, y0 = PANEL_Y, w = 256, h = 184;
+  const cx = 62, cy = 108, r1 = 50, r0 = 28;
+  const total = error ? 0 : counts.reduce((a, b) => a + b, 0);
+  let slices;
+  if (!total) {
+    slices = `<circle cx="${cx}" cy="${cy}" r="${(r0 + r1) / 2}" fill="none" stroke="#dfe7f2" stroke-width="${r1 - r0}"/>`;
+  } else {
+    let a = 0;
+    slices = counts.map((n, i) => {
+      if (!n) return '';
+      const da = (n / total) * Math.PI * 2;
+      const shape = n === total
+        ? `<circle cx="${cx}" cy="${cy}" r="${(r0 + r1) / 2}" fill="none" stroke="${CREW[i][1]}" stroke-width="${r1 - r0}"/>`
+        : `<path d="${arc(cx, cy, r0, r1, a, a + da)}" fill="${CREW[i][1]}" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>`;
+      a += da;
+      return shape;
+    }).join('');
+  }
+  const legend = CREW.map(([label, color], i) => {
+    const y = 84 + i * 30;
+    const pct = total ? `${Math.round((counts[i] / total) * 100)}%` : '—';
+    return `
+    <rect x="126" y="${y - 10}" width="12" height="12" rx="3" fill="${color}"/>
+    <text x="144" y="${y}" font-size="13" font-weight="600" fill="${soft}">${label}</text>
+    <text x="${w - 14}" y="${y}" text-anchor="end" font-size="15" font-weight="800" fill="${ink}">${pct}</text>`;
+  }).join('');
+  return `
+  <g transform="translate(${x0} ${y0})">
+    <rect width="${w}" height="${h}" rx="12" fill="#fff"/>
+    <rect width="${w}" height="6" rx="3" fill="${stripes[1]}"/>
+    <text x="14" y="30" font-size="13" font-weight="700" fill="${soft}">people aboard per flight</text>
+    ${slices}${legend}
+  </g>`;
+}
+
 export function renderCard(stats, { updated = new Date(), error = false } = {}) {
   const s = stats ?? {};
   const v = (f, n) => (error || n == null ? '—' : f(n));
@@ -90,6 +134,10 @@ export function renderCard(stats, { updated = new Date(), error = false } = {}) 
     [error ? '—' : `${num(s.landed ?? 0)} · ${num(s.ended_abruptly ?? 0)}`, 'landed · ended abruptly'],
     [error ? '—' : `${num(s.rolls ?? 0)} · ${num(s.loops ?? 0)}`, 'barrel rolls · loops'],
     [v(num, s.jumped_out), 'jumped out mid-air'],
+    [v(num, s.items_pocketed), 'items pocketed'],
+    [v(num, s.items_spilled), 'spilled from pockets'],
+    [v(n => `${num(n)} km/h`, s.top_speed_kmh), 'top speed'],
+    [v(duration, s.upside_down_s), 'spent upside down'],
   ];
   const hhmm = updated.toISOString().slice(11, 16);
   const footer = error
@@ -112,6 +160,7 @@ export function renderCard(stats, { updated = new Date(), error = false } = {}) 
   ${heli(650, 4)}
   ${tiles.map(([val, label], i) => tile(i, val, label)).join('')}
   ${chart(s.daily, error)}
+  ${crewPie([s.solo_flights, s.duo_flights, s.trio_flights].map(n => Number(n) || 0), error)}
   <text x="24" y="${H - 18}" font-size="13" font-weight="600" fill="${ink}" opacity="0.7">${esc(footer)}</text>
 </svg>`;
 }

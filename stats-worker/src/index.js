@@ -3,7 +3,10 @@
 import { renderCard } from './card.js';
 
 const CACHE_SECONDS = 600;
-const CACHE_KEY = 'https://big-choppa-stats.internal/stats/v2';
+const CACHE_KEY = 'https://big-choppa-stats.internal/stats/v3';
+
+// Most people aboard at once; older versions only logged the count at the end.
+const riders = `toInt(coalesce(properties.max_riders, properties.riders))`;
 
 const QUERY = `
 SELECT
@@ -18,9 +21,15 @@ SELECT
   countIf(event = 'jumped_out') AS jumped_out,
   countIf(event = 'flight_ended' AND properties.how = 'landed') AS landed,
   countIf(event = 'flight_ended' AND properties.how = 'ended abruptly') AS ended_abruptly,
-  countIf(event = 'choppa_spawned') AS spawned
+  countIf(event = 'choppa_spawned') AS spawned,
+  sum(if(event = 'flight_ended', toFloat(properties.upside_down_s), 0)) AS upside_down_s,
+  countIf(event = 'pocket_used' AND properties.action = 'stowed') AS items_pocketed,
+  sum(if(event = 'choppa_ended_abruptly', toFloat(properties.pocket_items), 0)) AS items_spilled,
+  countIf(event = 'flight_ended' AND ${riders} <= 1) AS solo_flights,
+  countIf(event = 'flight_ended' AND ${riders} = 2) AS duo_flights,
+  countIf(event = 'flight_ended' AND ${riders} >= 3) AS trio_flights
 FROM events
-WHERE event IN ('flight_ended', 'jumped_out', 'choppa_spawned')`;
+WHERE event IN ('flight_ended', 'jumped_out', 'choppa_spawned', 'pocket_used', 'choppa_ended_abruptly')`;
 
 // Days are UTC to match the card's "updated … UTC" footer.
 const DAILY_QUERY = `
