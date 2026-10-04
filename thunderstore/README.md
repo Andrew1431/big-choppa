@@ -23,7 +23,7 @@ Pocketed items count as held: if you quit with something in a pocket, you'll fin
 
 | Key | Action |
 | --- | --- |
-| F8 | Spawn a choppa in front of you (replaces your old one if it's empty) |
+| F8 | Call in a choppa: it flies in and lands near you (replaces your old one if it's empty) |
 | G | Get in / get out. Takes the pilot seat if it's free, otherwise a passenger seat |
 | W / S | Collective up / down. Springs back to hover when released, or to idle on the ground |
 | A / D | Pedals: turn left / right |

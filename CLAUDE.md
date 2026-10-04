@@ -72,7 +72,7 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
   latest with `https://thunderstore.io/api/experimental/package/BepInEx/BepInExPack_IL2CPP/`.
 - **Always load-test in the Dev profile before packaging.** A config section named "Pilot's Logbook" once broke
   loading entirely: BepInEx section/key names can't contain `= \n \t \ " ' [ ]`.
-- Published so far: 1.0.0 (no logbook). 1.0.1 adds the Pilot Logbook. 1.0.2 (README stats card only, no code change) is packaged once the card is live. 1.0.3 adds night lights, live config reload and the CenterOfMassHeight migration. 1.1.0 adds choppa pockets. 1.1.1 adds pocket/crew logbook analytics (no gameplay change). 1.1.2 fixes bonk sounds (Collision getters are stripped) and makes dev builds log instead of send logbook events. 1.1.3 adds FreelookMouseSensitivity. 1.1.4 makes pockets inventory homes (`isInventory = true`) so pocketed items save to the lost & found (an earlier assumption that they couldn't was never tested).
+- Published so far: 1.0.0 (no logbook). 1.0.1 adds the Pilot Logbook. 1.0.2 (README stats card only, no code change) is packaged once the card is live. 1.0.3 adds night lights, live config reload and the CenterOfMassHeight migration. 1.1.0 adds choppa pockets. 1.1.1 adds pocket/crew logbook analytics (no gameplay change). 1.1.2 fixes bonk sounds (Collision getters are stripped) and makes dev builds log instead of send logbook events. 1.1.3 adds FreelookMouseSensitivity. 1.2.0 adds the fly-in (F8 calls the choppa in on autopilot; `[Controls] FlyIn`). 1.1.4 makes pockets inventory homes (`isInventory = true`) so pocketed items save to the lost & found (an earlier assumption that they couldn't was never tested).
 - Bump `ChoppaNet.Protocol` whenever the wire format changes; mismatched peers are ignored by the host.
 
 ## Code map
@@ -83,6 +83,7 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
 - `ChoppaManager.cs`: local player lookup, client-side choppa list, boarding/seats, camera takeover, HUD, crashes.
 - `Helicopter.cs`: flight model (owner) or snapshot-interpolated kinematic proxy (everyone else).
 - `ChoppaNet.cs` / `ChoppaServer.cs`: networking (see below).
+- `ChoppaAutopilot.cs`: flies a newly called choppa in using only pilot inputs (collective, rates); `ChoppaManager.FindLandingSpot` picks a flat, clear spot with open sky or refuses the spawn.
 - `HeliModel.cs`: primitives; seat/exit anchors. `ChoppaCrash.cs`: seeded break-apart.
 - `ChoppaLights.cs`: lamp lenses (unlit, swapped on/off) plus three real lights per choppa: headlight spot, cabin
   glow (always on), flashing roof beacon. Powered = `EngineOn || RotorSpin > 0.1` so proxies light up too.

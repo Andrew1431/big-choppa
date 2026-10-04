@@ -1,6 +1,6 @@
 {
   "name": "BigChoppa",
-  "version_number": "1.1.4",
+  "version_number": "1.2.0",
   "website_url": "https://github.com/Andrew1431/big-choppa",
   "description": "A goofy playground helicopter flown with collective, pedals and mouse cyclic. Seats 3 and is shared with everyone in the lobby. Everyone needs the mod.",
   "dependencies": [

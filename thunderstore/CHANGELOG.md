@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.2.0
 
 - Calling a choppa (F8) now has it fly in from the distance and land near you, if there's a flat, open spot
   nearby. Don't like it? Set `[Controls] FlyIn` to `false` and it appears right in front of you like before.
