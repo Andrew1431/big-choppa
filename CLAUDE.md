@@ -63,13 +63,16 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
   `dist\Andrew1431-BigChoppa-<ver>.zip` (manifest, icon, README, CHANGELOG, DLL at zip root). Upload at
   https://thunderstore.io/c/big-walk/create/ (the owner does this; it needs their login). Versions can't be
   re-uploaded or deleted, only deprecated.
+- `.\package.ps1 -Upload` publishes the zip with tcli (`dotnet tool install -g tcli`; config in
+  `thunderstore/thunderstore.toml`) using a team service-account token in `$env:TCLI_AUTH_TOKEN`. The token never
+  goes in the repo or chat. CI can't build the DLL (it needs the game's interop assemblies), so publishing stays local.
 - Manifest rules: `name` is [A-Za-z0-9_] only, description ≤ 250 chars, no BOM in manifest.json, icon exactly
   256×256 PNG. `thunderstore/make-icon.ps1` regenerates `icon.png` with System.Drawing.
 - Dependency: `BepInEx-BepInExPack_IL2CPP-6.0.755` (matches the BepInEx 6.0.0-be.755 we build against). Check the
   latest with `https://thunderstore.io/api/experimental/package/BepInEx/BepInExPack_IL2CPP/`.
 - **Always load-test in the Dev profile before packaging.** A config section named "Pilot's Logbook" once broke
   loading entirely: BepInEx section/key names can't contain `= \n \t \ " ' [ ]`.
-- Published so far: 1.0.0 (no logbook). 1.0.1 adds the Pilot Logbook. 1.0.2 (README stats card only, no code change) is packaged once the card is live. 1.0.3 adds night lights, live config reload and the CenterOfMassHeight migration. 1.1.0 adds choppa pockets (confirmed: the game only saves items players are actively holding, so the pocket warning stays).
+- Published so far: 1.0.0 (no logbook). 1.0.1 adds the Pilot Logbook. 1.0.2 (README stats card only, no code change) is packaged once the card is live. 1.0.3 adds night lights, live config reload and the CenterOfMassHeight migration. 1.1.0 adds choppa pockets (confirmed: the game only saves items players are actively holding, so the pocket warning stays). 1.1.1 adds pocket/crew logbook analytics (no gameplay change).
 - Bump `ChoppaNet.Protocol` whenever the wire format changes; mismatched peers are ignored by the host.
 
 ## Code map
@@ -93,9 +96,9 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
 - `ChoppaLogbook.cs`: "Pilot's Logbook" anonymous usage events sent to PostHog (US region, `/batch/`; the project key is
   write-only and public by design). On by default, opt-out via `[Pilot Logbook] Enabled`. Events: `choppa_spawned`,
   `choppa_boarded {seat}`, `flight_ended {duration_s, distance_m, max_altitude_m, top_speed_kmh, end_speed_kmh, how: landed|bailed|ended
-  abruptly, riders, rolls, loops, upside_down_s, cockpit_view_pct}` (pilot only), `ride_ended {duration_s, how: got
+  abruptly, riders, max_riders, pocket_items, rolls, loops, upside_down_s, cockpit_view_pct}` (pilot only), `ride_ended {duration_s, how: got
   out|jumped out|ended abruptly}` (passengers), `jumped_out {seat, height_m, speed_kmh}` (anyone leaving > 1.5 m up),
-  `flipped_upright {from: inside|outside}` (F9). The owner deliberately does NOT want game-launch or session-size events. **Any new event or property must
+  `flipped_upright {from: inside|outside}` (F9), `choppa_ended_abruptly {impact_kmh, riders, piloted, pocket_items}` (the crash, sent by the simulating owner, so it covers unpiloted crashes too), `pocket_used {action: stowed|taken, item}` (host only, so each is counted once per lobby). The owner deliberately does NOT want game-launch or session-size events. **Any new event or property must
   be added to the list in `thunderstore/README.md`**; full transparency was a condition. Never send names or Steam IDs.
   "Ended abruptly" is the crash, worded so the README stays honest without spoiling it.
 - `stats-worker/`: Cloudflare Worker `big-choppa-stats` at https://big-choppa.hartwigdev.ca serving `/card.svg` (the
@@ -161,3 +164,7 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
   until someone presses F8 (the new Spawn message makes them show up; unclear whether the others appear too). The
   host probably needs to replay every existing choppa (Spawn + Seats + Owner) to a connection right after its
   `HelloAck`. Owner is fine leaving it for now (reported after 1.1.0).
+- **Stats card follow-up (once the pocket/crew analytics have data):** add tiles for items pocketed
+  (`pocket_used` stowed), items spilled in crashes (sum `choppa_ended_abruptly.pocket_items`; label must not spoil the
+  crash), top speed, time upside down, plus a solo / 2 / 3 aboard donut from
+  `coalesce(max_riders, riders)` on `flight_ended`. A working version was prototyped and rolled back on 2026-10-04.

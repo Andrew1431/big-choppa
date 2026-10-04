@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1
+
+- Pilot's Logbook now also notes how many items are in the choppa pockets when a flight ends, the most people
+  aboard at once, and what gets put into or taken out of the pockets. The full list is in the README, and
+  `[Pilot Logbook] Enabled = false` still turns it all off.
+
 ## 1.1.0
 
 - Choppa pockets: three on each side, holding anything a backpack can.

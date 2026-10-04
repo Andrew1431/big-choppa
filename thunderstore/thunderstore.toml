@@ -1,0 +1,15 @@
+# Only used by `package.ps1 -Upload` (tcli publish --file). The zip's manifest.json is the source of truth for the
+# version, description and dependencies; this just says where the upload goes.
+[config]
+schemaVersion = "0.0.1"
+
+[package]
+namespace = "Andrew1431"
+name = "BigChoppa"
+
+[publish]
+repository = "https://thunderstore.io"
+communities = ["big-walk"]
+
+[publish.categories]
+big-walk = ["mods"]

@@ -69,11 +69,14 @@ The choppa keeps a tiny logbook and sends it to me, the author, purely because I
   - the highest it got
   - its top speed
   - its speed at the very end
-  - how many people were aboard
+  - how many people were aboard at the end, and the most aboard at once
+  - how many items were in the choppa pockets at the end
   - how many barrel rolls and loops you pulled off
   - how many seconds you spent upside down
   - how much of the flight was in cockpit view versus chase view
   - how it ended: *landed*, *bailed* (pilot hopped out mid-air) or *ended abruptly*
+- A choppa's flight ended abruptly (logged by whichever game was flying it, even with nobody at the controls): how fast it was going, how many people were aboard, whether anyone was piloting, and how many items were in its pockets
+- Something was put into or taken out of a choppa pocket, and what the item was (the game's own name for it). Logged by the host, so each one counts once per lobby
 - A passenger's ride ended: how long it lasted and how it ended (*got out*, *jumped out* or *ended abruptly*)
 - Someone jumped out mid-air: pilot or passenger, how high it was, and how fast it was going
 - Someone used the flip-upright key, and whether they were inside the choppa or outside it

@@ -29,6 +29,16 @@ internal sealed class ChoppaPockets
     readonly Prop[] seen = new Prop[Count];
     float rebindUntil, nextRebind;
 
+    public int ItemCount
+    {
+        get
+        {
+            int n = 0;
+            foreach (var home in homes) if (home != null && home.pinnedProp != null) n++;
+            return n;
+        }
+    }
+
     public static ChoppaPockets Build(Transform model, Helicopter heli)
     {
         var p = new ChoppaPockets { heli = heli };
@@ -127,6 +137,12 @@ internal sealed class ChoppaPockets
             if (prop == seen[i]) continue;
             if (seen[i] != null) IgnoreCollisions(seen[i], false);
             if (prop != null) IgnoreCollisions(prop, true);
+            // Only the host logs, so each stow/take in a lobby is counted once (we can't tell who did it).
+            if (NetworkServer.active)
+            {
+                if (seen[i] != null) ChoppaLogbook.PocketUsed(false, seen[i].name);
+                if (prop != null) ChoppaLogbook.PocketUsed(true, prop.name);
+            }
             seen[i] = prop;
             Plugin.Verbose($"Choppa {heli.Id:X8} pocket {i}: {(prop != null ? prop.name : "empty")}");
         }

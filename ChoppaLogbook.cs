@@ -31,7 +31,7 @@ internal static class ChoppaLogbook
     {
         public float Seconds, Distance, MaxAltitude, TopSpeedKmh, EndSpeedKmh, UpsideDownSeconds, CockpitPercent;
         public string How; // "landed", "bailed" (pilot hopped out mid-air) or "ended abruptly"
-        public int Riders, Rolls, Loops;
+        public int Riders, MaxRiders, Rolls, Loops, PocketItems;
     }
 
     public static void FlightEnded(Flight f) =>
@@ -44,6 +44,8 @@ internal static class ChoppaLogbook
             ["end_speed_kmh"] = Mathf.Round(f.EndSpeedKmh),
             ["how"] = f.How,
             ["riders"] = f.Riders,
+            ["max_riders"] = f.MaxRiders,
+            ["pocket_items"] = f.PocketItems,
             ["rolls"] = f.Rolls,
             ["loops"] = f.Loops,
             ["upside_down_s"] = Mathf.Round(f.UpsideDownSeconds),
@@ -53,6 +55,20 @@ internal static class ChoppaLogbook
     // A passenger's ride: "got out", "jumped out" (mid-air) or "ended abruptly".
     public static void RideEnded(float seconds, string how) =>
         Log("ride_ended", new() { ["duration_s"] = Mathf.Round(seconds), ["how"] = how });
+
+    // Logged by whichever game simulates the choppa, so it's counted once even with nobody at the controls.
+    public static void EndedAbruptly(float impactKmh, int riders, bool piloted, int pocketItems) =>
+        Log("choppa_ended_abruptly", new()
+        {
+            ["impact_kmh"] = Mathf.Round(impactKmh),
+            ["riders"] = riders,
+            ["piloted"] = piloted,
+            ["pocket_items"] = pocketItems,
+        });
+
+    // Something went into ("stowed") or came out of ("taken") a choppa pocket. Item is the game's prop name.
+    public static void PocketUsed(bool stowed, string item) =>
+        Log("pocket_used", new() { ["action"] = stowed ? "stowed" : "taken", ["item"] = (item ?? "").Replace("(Clone)", "").Trim() });
 
     public static void FlippedUpright(bool seated) => Log("flipped_upright", new() { ["from"] = seated ? "inside" : "outside" });
 

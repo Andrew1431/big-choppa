@@ -803,7 +803,7 @@ public class ChoppaManager : MonoBehaviour
 
     float flightStart = -1f, flightMaxAlt, flightTopSpeed, flightDistance, groundedSince = -1f;
     float flightUpsideDown, flightCockpitTime, flightRollAccum, flightPitchAccum, rideStart = -1f;
-    int flightRolls, flightLoops;
+    int flightRolls, flightLoops, flightMaxRiders;
     Vector3 flightLastPos;
 
     // Height above whatever is below, ignoring the choppa's own parts. Works for proxies too (no Grounded there).
@@ -831,12 +831,13 @@ public class ChoppaManager : MonoBehaviour
                 flightStart = Time.time;
                 flightMaxAlt = flightTopSpeed = flightDistance = 0f;
                 flightUpsideDown = flightCockpitTime = flightRollAccum = flightPitchAccum = 0f;
-                flightRolls = flightLoops = 0;
+                flightRolls = flightLoops = flightMaxRiders = 0;
                 flightLastPos = pos;
             }
             float dt = Time.deltaTime;
             if (Vector3.Dot(h.transform.up, Vector3.up) < 0f) flightUpsideDown += dt;
             if (camMode == CamMode.Cockpit) flightCockpitTime += dt;
+            flightMaxRiders = Mathf.Max(flightMaxRiders, h.Occupants.Count(o => o != 0));
 
             // Integrate rotation about the choppa's own axes; a full 360 one way counts as a roll or loop.
             // Wobbling back and forth cancels out.
@@ -864,6 +865,7 @@ public class ChoppaManager : MonoBehaviour
         flightStart = -1f;
         groundedSince = -1f;
         if (duration < 1f) return;
+        int riders = h.Occupants.Count(o => o != 0);
         ChoppaLogbook.FlightEnded(new ChoppaLogbook.Flight
         {
             Seconds = duration,
@@ -872,7 +874,9 @@ public class ChoppaManager : MonoBehaviour
             TopSpeedKmh = flightTopSpeed,
             EndSpeedKmh = endSpeedKmh,
             How = how,
-            Riders = h.Occupants.Count(o => o != 0),
+            Riders = riders,
+            MaxRiders = Mathf.Max(flightMaxRiders, riders),
+            PocketItems = h.Pockets?.ItemCount ?? 0,
             Rolls = flightRolls,
             Loops = flightLoops,
             UpsideDownSeconds = flightUpsideDown,
@@ -896,6 +900,8 @@ public class ChoppaManager : MonoBehaviour
         int seed = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
         uint id = crashed.Id;
         Vector3 impact = crashed.ImpactVelocity;
+        try { ChoppaLogbook.EndedAbruptly(impact.magnitude * 3.6f, crashed.Occupants.Count(o => o != 0), crashed.Occupants[0] != 0, crashed.Pockets?.ItemCount ?? 0); }
+        catch (Exception e) { Plugin.L.LogError($"Logbook: {e}"); }
         try { ChoppaNet.ToServer(ChoppaNet.Write(Msg.Crash, w => { w.Write(id); w.Write(impact); w.Write(seed); }), true); }
         catch (Exception e) { Plugin.L.LogError($"Sending crash: {e}"); }
         HandleCrash(crashed, impact, seed);

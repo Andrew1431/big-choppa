@@ -19,6 +19,19 @@ Close Big Walk, then in PowerShell in this folder:
 
 This installs `BigChoppa.dll` to `BepInEx\plugins\BigChoppa`. The old `BepInEx\plugins\BigWalkHello` folder can be deleted.
 
+### Scripts
+
+| Command | What it does |
+|---|---|
+| `.\build.ps1` | Dev build (includes dev-only code), installs locally and to `remote-targets.txt` |
+| `.\build.ps1 -InstallBepInEx` | Same, plus copies the BepInEx loader + interop to remote targets (first setup / after a game update) |
+| `.\build.ps1 -GameDirectory <path>` / `-BepInExDirectory <path>` | Override where the game / BepInEx live |
+| `.\package.ps1` | Release build (no dev code), checks versions match, zips `dist\Andrew1431-BigChoppa-<ver>.zip` |
+| `.\package.ps1 -Upload` | Same, then publishes to Thunderstore via tcli (needs `$env:TCLI_AUTH_TOKEN`) |
+| `.\thunderstore\make-icon.ps1` | Regenerates the 256×256 `thunderstore/icon.png` |
+| `cd stats-worker; node preview.js` | Renders the logbook card with fake numbers to `preview.svg` |
+| `cd stats-worker; npx wrangler deploy` | Deploys the logbook card worker |
+
 ## Flying
 
 | Key | Action |

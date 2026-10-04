@@ -1,9 +1,11 @@
 # Builds Release and zips a Thunderstore package into dist\. Upload the zip at
-# https://thunderstore.io/c/big-walk/create/
+# https://thunderstore.io/c/big-walk/create/, or pass -Upload to publish it with tcli
+# (dotnet tool install -g tcli) using a team service account token in $env:TCLI_AUTH_TOKEN.
 [CmdletBinding()]
 param(
     [string]$GameDirectory = 'E:\SteamLibrary\steamapps\common\Big Walk',
-    [string]$Team = 'Andrew1431'
+    [string]$Team = 'Andrew1431',
+    [switch]$Upload
 )
 
 $ErrorActionPreference = 'Stop'
@@ -38,4 +40,14 @@ if (Test-Path $zip) { Remove-Item -Force $zip }
 Compress-Archive -Path (Join-Path $staging '*') -DestinationPath $zip
 Remove-Item -Recurse -Force $staging
 Write-Host "Package ready: $zip"
+
+if ($Upload) {
+    if (-not $env:TCLI_AUTH_TOKEN) { throw 'Set $env:TCLI_AUTH_TOKEN to a Thunderstore service account token (team settings > Service Accounts).' }
+    if (-not (Get-Command tcli -ErrorAction SilentlyContinue)) { throw 'tcli not found: dotnet tool install -g tcli' }
+    $published = try { Invoke-RestMethod "https://thunderstore.io/api/experimental/package/$Team/$($manifest.name)/" } catch { $null }
+    if ($published.latest.version_number -eq $version) { throw "$version is already on Thunderstore; versions can't be re-uploaded. Bump it." }
+    tcli publish --file $zip --config-path (Join-Path $ts 'thunderstore.toml')
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    Write-Host "Uploaded ${version}: https://thunderstore.io/c/big-walk/p/$Team/$($manifest.name)/"
+}
 exit 0
