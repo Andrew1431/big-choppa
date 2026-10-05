@@ -48,5 +48,3 @@ remote-targets.txt
 # Thunderstore package output
 dist/
 
-# Dumper build output
-tools/dumper/out/

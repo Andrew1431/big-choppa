@@ -111,11 +111,9 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
 - `DevTime.cs`: dev-build-only `,` / `.` = time of day -/+ 1 h via Enviro (`EnviroManager.Time.SetTimeOfDay`); falls
   back to `SkyManager.SetFixedTime` if the game snaps it back.
 - `ChoppaPhysics.cs`: collision-layer fix. `ChoppaInput.cs`: Rewired with Unity Input fallback.
-- `tools/dumper`: Mono.Cecil type dumper for the interop DLLs (excluded from the mod build). Usage:
-  `dotnet build tools/dumper/dumper.csproj -o tools/dumper/out` then
-  `tools/dumper/out/dumper.exe "<game>/BepInEx/interop/Mirror.dll" '^Mirror\.NetworkServer$'`
-  (append `names` to list type names only). Prints fields, enum values and which members are static. This is how
-  game APIs were discovered; there's no source.
+- Game APIs were discovered with a throwaway Mono.Cecil console app (Mono.Cecil.dll is in `BepInEx\core`): load an
+  interop DLL (`BepInEx\interop\Assembly-CSharp.dll`, `Mirror.dll`, …), regex-match type names, print fields, enum
+  values, properties and methods with static-ness. There's no game source; the interop stubs are the API surface.
 
 ## Hard-won game / IL2CPP facts
 
