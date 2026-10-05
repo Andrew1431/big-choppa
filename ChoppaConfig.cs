@@ -53,6 +53,7 @@ internal static class ChoppaConfig
     public static ConfigEntry<bool> ShowHud, VerboseLogging;
 #if DEVBUILD
     public static ConfigEntry<bool> DevAutoHost;
+    public static ConfigEntry<float> DevSprintMultiplier;
 #endif
 
     // Bump when adding a migration below.
@@ -143,6 +144,7 @@ internal static class ChoppaConfig
 
 #if DEVBUILD
         DevAutoHost = cfg.Bind("Dev", "AutoHost", false, "Dev builds only: click through the menus and host your most recent save on launch. Hold Shift during startup to skip.");
+        DevSprintMultiplier = cfg.Bind("Dev", "SprintMultiplier", 5f, "Dev builds only: sprinting moves you this many times faster. 1 = normal.");
 #endif
 
         Migrate(cfg);

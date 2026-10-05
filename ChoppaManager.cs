@@ -131,6 +131,9 @@ public class ChoppaManager : MonoBehaviour
     {
         if (seated) PinPlayer();
         PinRemotePassengers();
+#if DEVBUILD
+        if (!seated) DevSprint.FixedTick(local);
+#endif
     }
 
     void LateUpdate()
