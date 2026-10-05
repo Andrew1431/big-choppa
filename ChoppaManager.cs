@@ -106,6 +106,15 @@ public class ChoppaManager : MonoBehaviour
             if (seated) Leave();
             else TryBoard();
         }
+#if DEVBUILD
+        // Local-only seat cycle for eyeballing seat anchors; the host still thinks we're in the original seat.
+        if (inputAllowed && seated && ChoppaInput.Pressed(KeyCode.F7))
+        {
+            seatIndex = (seatIndex + 1) % Helicopter.SeatCount;
+            lookYaw = lookPitch = 0f;
+            Plugin.L.LogInfo($"Dev: moved to seat {seatIndex} (local only).");
+        }
+#endif
         if (pendingBoardId != 0 && Time.time > pendingBoardUntil)
         {
             pendingBoardId = 0;
@@ -769,8 +778,38 @@ public class ChoppaManager : MonoBehaviour
         RestoreCamera();
     }
 
+    // The game hides the local head/torso from its first-person camera by making those renderers shadows-only
+    // (their shadow still shows). Turn them back on while the chase camera is in use.
+    readonly List<Renderer> shownBody = new();
+    bool bodyShown;
+
+    void SetBodyVisible(bool visible)
+    {
+        if (visible == bodyShown) return;
+        bodyShown = visible;
+        if (visible)
+        {
+            shownBody.Clear();
+            if (local == null || !Alive(local)) return;
+            foreach (var r in local.GetComponentsInChildren<Renderer>(true))
+                if (r != null && r.shadowCastingMode == UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly)
+                {
+                    r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+                    shownBody.Add(r);
+                }
+            Plugin.Verbose($"Showing {shownBody.Count} hidden body renderer(s) for the chase camera.");
+        }
+        else
+        {
+            foreach (var r in shownBody)
+                if (r != null && Alive(r)) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
+            shownBody.Clear();
+        }
+    }
+
     void RestoreCamera()
     {
+        SetBodyVisible(false);
         if (cam == null || !Alive(cam)) return;
         cam.transform.SetParent(camParent, false);
         cam.transform.localPosition = camLocalPos;
@@ -872,6 +911,8 @@ public class ChoppaManager : MonoBehaviour
             lookYaw = Mathf.Clamp(lookYaw + m.x * 2f, -170f, 170f);
             lookPitch = Mathf.Clamp(lookPitch - m.y * 2f, -70f, 70f);
         }
+
+        SetBodyVisible(camMode == CamMode.Chase);
 
         if (camMode == CamMode.Cockpit)
         {

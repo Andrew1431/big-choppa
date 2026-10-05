@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.1
+
+- The choppa is smaller by default, which suits the world much better. `[Model] Scale` changed from 1.0 to 0.6
+  (updated automatically unless you had changed it yourself); set it back to 1.0 for the old size.
+- In the chase camera you can now see your own head and body in the seat.
+
 ## 1.2.0
 
 - Calling a choppa (F8) now has it fly in from the distance and land near you, if there's a flat, open spot

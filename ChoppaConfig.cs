@@ -57,7 +57,7 @@ internal static class ChoppaConfig
 #endif
 
     // Bump when adding a migration below.
-    const int CurrentConfigVersion = 1;
+    const int CurrentConfigVersion = 2;
 
     public static void Bind(ConfigFile cfg)
     {
@@ -108,7 +108,7 @@ internal static class ChoppaConfig
         CrashStunRadius = cfg.Bind(x, "StunRadius", 6f, "Your character gets knocked down if within this distance of a crash (pilot always is).");
 
         const string m = "Model";
-        HeliScale = cfg.Bind(m, "Scale", 1.0f, "Overall size of the choppa.");
+        HeliScale = cfg.Bind(m, "Scale", 0.6f, "Overall size of the choppa.");
         SeatHeightOffset = cfg.Bind(m, "SeatHeightOffset", 0.0f, "Raise/lower where you sit (metres, before Scale).");
         SeatForwardOffset = cfg.Bind(m, "SeatForwardOffset", 0.0f, "Move where you sit forward/back (metres, before Scale).");
         EnterDistance = cfg.Bind(m, "EnterDistance", 5f, "How close you need to be to the nearest part of the choppa to board.");
@@ -195,6 +195,7 @@ internal static class ChoppaConfig
         if (from >= CurrentConfigVersion) return;
 
         if (from < 1) Upgrade(CenterOfMassHeight, 1.4f);
+        if (from < 2) Upgrade(HeliScale, 1.0f);
 
         version.Value = CurrentConfigVersion;
     }
