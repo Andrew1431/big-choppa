@@ -18,7 +18,7 @@ internal enum Msg : byte
 // so the rest of the mod has a single code path.
 internal static class ChoppaNet
 {
-    public const ushort Protocol = 2;
+    public const ushort Protocol = 3; // 3: Spawn carries the vehicle; seat count depends on it
     public const int LocalConn = -1;
     const ushort HandlerId = 0xC40F; // arbitrary; checked for collisions at registration
     const int Reliable = 0, Unreliable = 1;

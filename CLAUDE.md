@@ -1,7 +1,7 @@
 # Big Choppa: notes for Claude
 
 BepInEx 6 IL2CPP mod for **Big Walk** (Steam, Unity 6, URP, Mirror networking). Adds a goofy primitive-built toy
-helicopter with "real" controls (collective, pedals, mouse cyclic), 3 seats, multiplayer sync, synthesised audio,
+helicopter with "real" controls (collective, pedals, mouse cyclic), 6 seats (Little Bird) or 3 (classic), multiplayer sync, synthesised audio,
 and a break-apart crash. Published on Thunderstore as `BigChoppa` (community `big-walk`).
 
 `README.md` covers controls/config for devs; `thunderstore/README.md` is the player-facing page. Machine-specific
@@ -85,7 +85,15 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
 - `Helicopter.cs`: flight model (owner) or snapshot-interpolated kinematic proxy (everyone else).
 - `ChoppaNet.cs` / `ChoppaServer.cs`: networking (see below).
 - `ChoppaAutopilot.cs`: flies a newly called choppa in using only pilot inputs (collective, rates); `ChoppaManager.FindLandingSpot` picks a flat, clear spot with open sky or refuses the spawn.
-- `HeliModel.cs`: primitives; seat/exit anchors. `ChoppaCrash.cs`: seeded break-apart.
+- `Vehicles.cs`: `Vehicle` enum (Classic / LittleBird; wire value in the Spawn message, never reorder), per-vehicle
+  seat count and scale (`[Model] Scale` × 1/0.6 for the Little Bird, which is modelled at real size), and
+  `LittleBirdModel`, which builds the MH-6 from the embedded `Resources/mh6.bin` using its named empties.
+  `[Model] Vehicle` picks what F8 calls in; each choppa is built as its spawner chose, so mixed lobbies work.
+- `MeshModel.cs`: reads `mh6.bin` and instantiates nodes/meshes. Source is `model/mh6.blend`; re-export after any
+  model change with `model/export_mh6.py` (Blender: `blender --background model/mh6.blend --python
+  model/export_mh6.py`, or run it in an open Blender). Conventions and empties: `model/PLAN-3.0.0.md`.
+- `HeliModel.cs`: the classic choppa from primitives; seat/exit anchors. `ChoppaCrash.cs`: seeded break-apart
+  (Little Bird debris uses convex MeshColliders).
 - `ChoppaLights.cs`: lamp lenses (unlit, swapped on/off) plus three real lights per choppa: headlight spot, cabin
   glow (always on), flashing roof beacon. Powered = `EngineOn || RotorSpin > 0.1` so proxies light up too.
 - `ChoppaPockets.cs`: 6 side pockets. Each is a game `PropHome` (`pinGroup` copied from a backpack pocket, normally
@@ -96,9 +104,9 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
   with it. Homes have `isInventory = true`, so pocketed items count as held and the game saves them to the lost & found.
 - `ChoppaAudio.cs` / `ChoppaBonker.cs`: procedural audio and collision bonks.
 - `ChoppaLogbook.cs`: "Pilot's Logbook" anonymous usage events sent to PostHog (US region, `/batch/`; the project key is
-  write-only and public by design). Dev builds (`DEVBUILD`) never send: they log each event to `LogOutput.log` as `Logbook (dev, not sent): …` instead. On by default, opt-out via `[Pilot Logbook] Enabled`. Events: `choppa_spawned`,
+  write-only and public by design). Dev builds (`DEVBUILD`) never send: they log each event to `LogOutput.log` as `Logbook (dev, not sent): …` instead. On by default, opt-out via `[Pilot Logbook] Enabled`. Events: `choppa_spawned {vehicle}`,
   `choppa_boarded {seat}`, `flight_ended {duration_s, distance_m, max_altitude_m, top_speed_kmh, end_speed_kmh, how: landed|bailed|ended
-  abruptly, riders, max_riders, pocket_items, rolls, loops, upside_down_s, cockpit_view_pct}` (pilot only), `ride_ended {duration_s, how: got
+  abruptly, riders, max_riders, pocket_items, rolls, loops, vehicle, upside_down_s, cockpit_view_pct}` (pilot only), `ride_ended {duration_s, how: got
   out|jumped out|ended abruptly}` (passengers), `jumped_out {seat, height_m, speed_kmh}` (anyone leaving > 1.5 m up),
   `flipped_upright {from: inside|outside}` (F9), `choppa_ended_abruptly {impact_kmh, riders, piloted, pocket_items}` (the crash, sent by the simulating owner, so it covers unpiloted crashes too), `pocket_used {action: stowed|taken, item}` (host only, so each is counted once per lobby). The owner deliberately does NOT want game-launch or session-size events. **Any new event or property must
   be added to the list in `thunderstore/README.md`**; full transparency was a condition. Never send names or Steam IDs.

@@ -13,7 +13,8 @@ internal static class ChoppaServer
     class Entry
     {
         public uint Id, Owner;
-        public readonly uint[] Seats = new uint[Helicopter.SeatCount];
+        public Vehicle Vehicle;
+        public uint[] Seats;
         public Vector3 Pos;
         public Quaternion Rot = Quaternion.identity;
         public byte[] LastState;
@@ -54,6 +55,8 @@ internal static class ChoppaServer
         uint id = r.ReadUInt32();
         if (id == 0 || helis.ContainsKey(id)) return;
         var e = new Entry { Id = id, Owner = sender, Pos = r.ReadVector3(), Rot = r.ReadQuaternion() };
+        e.Vehicle = Vehicles.Parse(r.ReadByte());
+        e.Seats = new uint[Vehicles.SeatCount(e.Vehicle)];
         helis[id] = e;
         Plugin.Verbose($"[server] Choppa {id:X8} spawned by {sender}.");
         ChoppaNet.ToClients(SpawnMsg(e), true);
@@ -155,6 +158,7 @@ internal static class ChoppaServer
         w.Write(e.Owner);
         w.Write(e.Pos);
         w.Write(e.Rot);
+        w.Write((byte)e.Vehicle);
     });
 
     static byte[] SeatsMsg(Entry e) => ChoppaNet.Write(Msg.Seats, w =>

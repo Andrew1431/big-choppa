@@ -23,9 +23,9 @@ internal static class ChoppaAudio
         if (!EnsureClips()) return;
         var go = new GameObject("Audio");
         go.transform.SetParent(heli.transform, false);
-        go.transform.localPosition = new Vector3(0f, 2.5f, 0f) * ChoppaConfig.HeliScale.Value;
-        heli.RotorAudio = Loop(go, rotorClip, 12f);
-        heli.TurbineAudio = Loop(go, turbineClip, 6f);
+        go.transform.localPosition = new Vector3(0f, 2.5f, 0f) * heli.Scale;
+        heli.RotorAudio = Loop(go, rotorClip, 12f * heli.Scale);
+        heli.TurbineAudio = Loop(go, turbineClip, 6f * heli.Scale);
     }
 
     static AudioSource Loop(GameObject go, AudioClip clip, float minDistance)
@@ -43,7 +43,7 @@ internal static class ChoppaAudio
         s.playOnAwake = false;
         s.spatialBlend = 1f;
         s.rolloffMode = AudioRolloffMode.Logarithmic;
-        s.minDistance = minDistance * ChoppaConfig.HeliScale.Value;
+        s.minDistance = minDistance;
         s.maxDistance = ChoppaConfig.AudioMaxDistance.Value;
         s.dopplerLevel = 0.6f;
         s.spread = 60f;
@@ -93,6 +93,7 @@ internal static class ChoppaAudio
 
     public static AudioSource OneShotSource(GameObject go, float minDistance)
     {
+        minDistance *= ChoppaConfig.HeliScale.Value;
         var s = go.AddComponent<AudioSource>();
         Setup(s, minDistance);
         s.loop = false;

@@ -110,7 +110,7 @@ public class ChoppaManager : MonoBehaviour
         // Local-only seat cycle for eyeballing seat anchors; the host still thinks we're in the original seat.
         if (inputAllowed && seated && ChoppaInput.Pressed(KeyCode.F7))
         {
-            seatIndex = (seatIndex + 1) % Helicopter.SeatCount;
+            seatIndex = (seatIndex + 1) % seatHeli.Seats.Length;
             lookYaw = lookPitch = 0f;
             Plugin.L.LogInfo($"Dev: moved to seat {seatIndex} (local only).");
         }
@@ -216,7 +216,9 @@ public class ChoppaManager : MonoBehaviour
             case Msg.Spawn:
             {
                 uint id = r.ReadUInt32(), owner = r.ReadUInt32();
-                OnSpawned(id, owner, r.ReadVector3(), r.ReadQuaternion());
+                Vector3 pos = r.ReadVector3();
+                Quaternion rot = r.ReadQuaternion();
+                OnSpawned(id, owner, Vehicles.Parse(r.ReadByte()), pos, rot);
                 break;
             }
             case Msg.State:
@@ -226,13 +228,14 @@ public class ChoppaManager : MonoBehaviour
             {
                 uint id = r.ReadUInt32();
                 int n = r.ReadByte();
-                var occ = new uint[Helicopter.SeatCount];
+                if (!helis.TryGetValue(id, out var h)) break;
+                var occ = new uint[h.Occupants.Length];
                 for (int i = 0; i < n; i++)
                 {
                     uint o = r.ReadUInt32();
                     if (i < occ.Length) occ[i] = o;
                 }
-                if (helis.TryGetValue(id, out var h)) OnSeats(h, occ);
+                OnSeats(h, occ);
                 break;
             }
             case Msg.Owner:
@@ -265,20 +268,20 @@ public class ChoppaManager : MonoBehaviour
         }
     }
 
-    void OnSpawned(uint id, uint owner, Vector3 pos, Quaternion rot)
+    void OnSpawned(uint id, uint owner, Vehicle vehicle, Vector3 pos, Quaternion rot)
     {
         if (helis.ContainsKey(id) || local == null) return;
         if (choppaLayer < 0) choppaLayer = PickLayer(GroundBelow(pos + Vector3.up * 2f, 10f, out _));
-        var h = Helicopter.Build(id, pos, rot, choppaLayer, local.gameObject.scene);
+        var h = Helicopter.Build(id, vehicle, pos, rot, choppaLayer, local.gameObject.scene);
         h.Owner = owner;
         h.SetProxy(owner != Me);
         helis[id] = h;
-        Plugin.L.LogInfo($"Choppa {id:X8} spawned at {pos} by {NameOf(owner)}{(h.IsProxy ? " (remote)" : "")}.");
+        Plugin.L.LogInfo($"Choppa {id:X8} ({vehicle}) spawned at {pos} by {NameOf(owner)}{(h.IsProxy ? " (remote)" : "")}.");
         if (id == pendingSpawnId)
         {
             pendingSpawnId = 0;
             spawnHeli = h;
-            ChoppaLogbook.Spawned();
+            ChoppaLogbook.Spawned(vehicle);
             if (pendingFlyIn is { } fly && !h.IsProxy)
             {
                 h.Autopilot = new ChoppaAutopilot(h, fly.target, fly.cruiseY);
@@ -334,7 +337,7 @@ public class ChoppaManager : MonoBehaviour
         foreach (var h in helis.Values)
         {
             if (h == null || h.Broken) continue;
-            for (int i = 0; i < Helicopter.SeatCount; i++)
+            for (int i = 0; i < h.Occupants.Length && i < h.Seats.Length; i++)
             {
                 uint occ = h.Occupants[i];
                 if (occ == 0 || occ == Me) continue;
@@ -409,7 +412,8 @@ public class ChoppaManager : MonoBehaviour
         var root = local.transform;
         var fwd = Vector3.ProjectOnPlane(root.forward, Vector3.up).normalized;
         if (fwd.sqrMagnitude < 0.01f) fwd = Vector3.forward;
-        float s = ChoppaConfig.HeliScale.Value;
+        var vehicle = ChoppaConfig.VehicleChoice.Value;
+        float s = Vehicles.Scale(vehicle);
 
         bool flyIn = ChoppaConfig.FlyIn.Value;
         Vector3 pos;
@@ -464,7 +468,7 @@ public class ChoppaManager : MonoBehaviour
         do id = (uint)UnityEngine.Random.Range(1, int.MaxValue) ^ ((uint)UnityEngine.Random.Range(0, 2) << 31);
         while (id == 0 || helis.Keys.Any(k => ChoppaPockets.Slot(k) == ChoppaPockets.Slot(id))); // pockets need a free ticket slot
         pendingSpawnId = id;
-        ChoppaNet.ToServer(ChoppaNet.Write(Msg.Spawn, w => { w.Write(id); w.Write(pos); w.Write(rot); }), true);
+        ChoppaNet.ToServer(ChoppaNet.Write(Msg.Spawn, w => { w.Write(id); w.Write(pos); w.Write(rot); w.Write((byte)vehicle); }), true);
     }
 
     const float FlyInDistance = 220f;
@@ -488,12 +492,12 @@ public class ChoppaManager : MonoBehaviour
         if (seated && !seatHeli.IsProxy) target = seatHeli;
         else
         {
-            float best = ChoppaConfig.EnterDistance.Value * ChoppaConfig.HeliScale.Value * 3f;
+            float best = float.MaxValue;
             foreach (var h in helis.Values)
             {
                 if (h.IsProxy) continue;
                 float d = DistanceTo(h);
-                if (d < best) { best = d; target = h; }
+                if (d < best && d <= ChoppaConfig.EnterDistance.Value * h.Scale * 3f) { best = d; target = h; }
             }
         }
         if (target != null)
@@ -616,19 +620,21 @@ public class ChoppaManager : MonoBehaviour
     {
         Helicopter best = null;
         dist = float.MaxValue;
-        float max = ChoppaConfig.EnterDistance.Value * ChoppaConfig.HeliScale.Value;
+        float bestMargin = float.MaxValue;
         foreach (var h in helis.Values)
         {
             if (h == null || h.Broken) continue;
             float d = DistanceTo(h);
-            if (d < dist) { dist = d; best = h; }
+            dist = Mathf.Min(dist, d);
+            float margin = d - ChoppaConfig.EnterDistance.Value * h.Scale;
+            if (margin <= 0f && margin < bestMargin) { bestMargin = margin; best = h; }
         }
-        return dist <= max ? best : null;
+        return best;
     }
 
     static int FreeSeat(Helicopter h)
     {
-        for (int i = 0; i < Helicopter.SeatCount; i++)
+        for (int i = 0; i < h.Occupants.Length && i < h.Seats.Length; i++)
             if (h.Occupants[i] == 0) return i;
         return -1;
     }
@@ -637,7 +643,7 @@ public class ChoppaManager : MonoBehaviour
     {
         if (helis.Count == 0) { Hint($"No choppa yet - press {ChoppaConfig.SpawnKey.Value} to spawn one."); return; }
         var h = NearestBoardable(out float dist);
-        if (h == null) { Hint($"Too far from a choppa ({dist:0.0}m, need {ChoppaConfig.EnterDistance.Value * ChoppaConfig.HeliScale.Value:0.0}m)."); return; }
+        if (h == null) { Hint($"Too far from a choppa ({dist:0.0}m away)."); return; }
         int seat = FreeSeat(h);
         if (seat < 0) { Hint("That choppa is full."); return; }
 
@@ -922,7 +928,7 @@ public class ChoppaManager : MonoBehaviour
             return;
         }
 
-        float s = ChoppaConfig.HeliScale.Value;
+        float s = seatHeli.Scale;
         float yaw = Quaternion.LookRotation(Vector3.ProjectOnPlane(ht.forward, Vector3.up).normalized + Vector3.forward * 1e-4f).eulerAngles.y;
         var orbit = Quaternion.Euler(10f + lookPitch, yaw + lookYaw, 0f);
         Vector3 focus = ht.position + Vector3.up * (2f * s);
@@ -1006,6 +1012,7 @@ public class ChoppaManager : MonoBehaviour
             TopSpeedKmh = flightTopSpeed,
             EndSpeedKmh = endSpeedKmh,
             How = how,
+            Vehicle = Vehicles.Id(h.Vehicle),
             Riders = riders,
             MaxRiders = Mathf.Max(flightMaxRiders, riders),
             PocketItems = h.Pockets?.ItemCount ?? 0,
@@ -1050,7 +1057,7 @@ public class ChoppaManager : MonoBehaviour
             {
                 if (seatIndex == 0) EndFlight(h, "ended abruptly", impact.magnitude * 3.6f);
                 else EndRide("ended abruptly");
-                Vector3 seatPos = h.Seats[seatIndex].position + Vector3.up * (1.0f * ChoppaConfig.HeliScale.Value);
+                Vector3 seatPos = h.Seats[seatIndex].position + Vector3.up * (1.0f * h.Scale);
                 Vector3 fling = impact * 0.4f + Vector3.up * 9f + UnityEngine.Random.insideUnitSphere * 3f;
                 var yaw = Quaternion.Euler(0f, h.transform.eulerAngles.y, 0f);
                 h.EngineOn = false;
@@ -1060,7 +1067,7 @@ public class ChoppaManager : MonoBehaviour
             else if (local != null && Alive(local))
             {
                 Vector3 toPlayer = local.transform.position - crashPos;
-                float radius = ChoppaConfig.CrashStunRadius.Value * ChoppaConfig.HeliScale.Value;
+                float radius = ChoppaConfig.CrashStunRadius.Value * h.Scale;
                 if (toPlayer.magnitude < radius)
                 {
                     var rb = local.rb;

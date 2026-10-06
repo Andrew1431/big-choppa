@@ -3,6 +3,15 @@
 Replace the primitive-built choppa with a low-poly, toy-coloured MH-6 modelled in Blender (`mh6.blend`).
 Major version: new seat layout (6 seats) and protocol bump, so mixed lobbies with 2.x won't work.
 
+## Status
+
+- Done: model + empties, exporter (`model/export_mh6.py` -> `Resources/mh6.bin`, embedded), runtime loader
+  (`MeshModel.cs`), `Vehicle` refactor (`Vehicles.cs`; lights/pockets take per-vehicle layouts), `[Model] Vehicle`
+  config (default LittleBird), vehicle in the Spawn message (protocol 3), per-choppa seat count, logbook `vehicle`
+  property, transparent glass material, convex debris colliders, CHANGELOG/README.
+- Next: in-game test (looks, winding/normals, glass, seats/exits, pockets, lights, colliders/landing, crash),
+  then tuning. Later: F8 hold-to-pick UI. Release: version bump to 3.0.0, new icon/screenshots.
+
 ## Model conventions (mh6.blend)
 
 - Blender units are metres, nose points -Y, up is +Z. Everything hangs off the `MH6` empty.

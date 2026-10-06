@@ -23,7 +23,7 @@ internal static class ChoppaLogbook
 
     static bool On => ChoppaConfig.LogbookEnabled.Value;
 
-    public static void Spawned() => Log("choppa_spawned", null);
+    public static void Spawned(Vehicle vehicle) => Log("choppa_spawned", new() { ["vehicle"] = Vehicles.Id(vehicle) });
 
     public static void Boarded(bool pilot) => Log("choppa_boarded", new() { ["seat"] = pilot ? "pilot" : "passenger" });
 
@@ -31,6 +31,7 @@ internal static class ChoppaLogbook
     {
         public float Seconds, Distance, MaxAltitude, TopSpeedKmh, EndSpeedKmh, UpsideDownSeconds, CockpitPercent;
         public string How; // "landed", "bailed" (pilot hopped out mid-air) or "ended abruptly"
+        public string Vehicle; // Vehicles.Id
         public int Riders, MaxRiders, Rolls, Loops, PocketItems;
     }
 
@@ -43,6 +44,7 @@ internal static class ChoppaLogbook
             ["top_speed_kmh"] = Mathf.Round(f.TopSpeedKmh),
             ["end_speed_kmh"] = Mathf.Round(f.EndSpeedKmh),
             ["how"] = f.How,
+            ["vehicle"] = f.Vehicle,
             ["riders"] = f.Riders,
             ["max_riders"] = f.MaxRiders,
             ["pocket_items"] = f.PocketItems,

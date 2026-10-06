@@ -11,17 +11,17 @@ public class Helicopter : MonoBehaviour
 {
     public Helicopter(IntPtr ptr) : base(ptr) { }
 
-    public const int SeatCount = 3; // 0 = pilot, 1-2 = rear bench
-
     public uint Id;
+    public Vehicle Vehicle;
+    public float Scale;     // Model scale: the config's Scale times the vehicle's own factor
     public uint Owner;      // player netId whose PC simulates this choppa
     public bool IsProxy;    // true = someone else simulates it; we just replay their snapshots
-    public uint[] Occupants = new uint[SeatCount];
+    public uint[] Occupants; // seat 0 = pilot; sized by the vehicle's seat count (the host agrees)
 
     public Rigidbody Body;
     public AudioSource RotorAudio, TurbineAudio;
     public Transform MainRotor, TailRotor;
-    public Transform[] Seats, Exits;
+    public Transform[] Seats, Exits; // may be shorter than Occupants if a model failed to build
     public Transform PilotSeat => Seats[0];
     public Transform[] Pupils;
     public Vector3[] PupilRest;
@@ -46,7 +46,7 @@ public class Helicopter : MonoBehaviour
 
     public float HoverCollective => 1f / Mathf.Max(0.01f, ChoppaConfig.MaxLiftG.Value);
 
-    public static Helicopter Build(uint id, Vector3 position, Quaternion rotation, int layer, Scene scene)
+    public static Helicopter Build(uint id, Vehicle vehicle, Vector3 position, Quaternion rotation, int layer, Scene scene)
     {
         var root = new GameObject($"BigChoppa {id:X8}");
         if (scene.IsValid() && scene.isLoaded) SceneManager.MoveGameObjectToScene(root, scene);
@@ -61,9 +61,12 @@ public class Helicopter : MonoBehaviour
 
         var heli = root.AddComponent<Helicopter>();
         heli.Id = id;
+        heli.Vehicle = vehicle;
+        heli.Scale = Vehicles.Scale(vehicle);
+        heli.Occupants = new uint[Vehicles.SeatCount(vehicle)];
         heli.Body = body;
         heli.impactGraceUntil = Time.time + 1.5f;
-        HeliModel.Build(heli, ChoppaConfig.HeliScale.Value);
+        Vehicles.Build(heli);
         foreach (var t in root.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = layer;
         ChoppaPhysics.CollideWithEverything(root);
         heli.Pockets?.Activate();
@@ -72,7 +75,7 @@ public class Helicopter : MonoBehaviour
 
         // Pivot about halfway between skids and rotor so mouse pitch/roll turns it around its middle.
         body.automaticCenterOfMass = false;
-        body.centerOfMass = new Vector3(0f, ChoppaConfig.CenterOfMassHeight.Value, 0.1f) * ChoppaConfig.HeliScale.Value;
+        body.centerOfMass = new Vector3(0f, ChoppaConfig.CenterOfMassHeight.Value, 0.1f) * heli.Scale;
         return heli;
     }
 
@@ -161,7 +164,7 @@ public class Helicopter : MonoBehaviour
 
     bool CheckGrounded()
     {
-        float s = ChoppaConfig.HeliScale.Value;
+        float s = Scale;
         Vector3 origin = transform.position + transform.up * (0.5f * s);
         foreach (var h in Physics.RaycastAll(origin, -transform.up, 0.8f * s, ~0, QueryTriggerInteraction.Ignore))
         {

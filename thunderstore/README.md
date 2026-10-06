@@ -11,11 +11,13 @@
 
 A goofy, playground-style toy helicopter for Big Walk, flown with collective, pedals and cyclic.
 
-It has three seats, the pilot plus a two-person bench, and everyone in the lobby sees the same choppas.
+The choppa is a toy Little Bird: pilot and co-pilot up front, plus two riders on each outside bench, six in all.
+Miss the original spring-rider choppa (pilot plus a two-person bench)? Set `[Model] Vehicle = Classic` and that's
+the one you'll call in. Everyone in the lobby sees the same choppas, whichever ones people picked.
 
 **Everyone in the lobby needs the mod, including the host.**
 
-Each side of the choppa has three pockets that take anything a backpack takes. Hold an item, look at a pocket and place it like you would in a backpack. Grab it again to take it out.
+Each side of the choppa has three pockets (on the Little Bird they hang off the tail boom) that take anything a backpack takes. Hold an item, look at a pocket and place it like you would in a backpack. Grab it again to take it out.
 
 Pocketed items count as held: if you quit with something in a pocket, you'll find it in the lost & found next time.
 
@@ -45,6 +47,7 @@ Pocketed items count as held: if you quit with something in a pocket, you'll fin
 Every key and tuning value is in `BepInEx/config/com.andrew1431.bigchoppa.cfg`. With r2modman or Gale you can edit it from the mod manager's config editor. The file appears after you've launched the game once with the mod.
 
 Highlights:
+- Choppa: `Vehicle` (`LittleBird` or `Classic`), `Scale`
 - Controls: `MouseSensitivity`, `FreelookMouseSensitivity`, `InvertPitch`, `InvertRoll`, every key
 - Flight: `AutoLevel`, `ControlResponse`, `YawRate`, `MaxLiftG`, drag values
 - Lights: `HeadlightIntensity`, `HeadlightRange`, `HeadlightAngle`, `CabinGlow`
@@ -61,7 +64,7 @@ If the host doesn't have the mod, you may be kicked when you join. Set `Networki
 The choppa keeps a tiny logbook and sends it to me, the author, purely because I'm curious how people fly it. It's sent through PostHog, an analytics service. It's anonymous and there's nothing personal in it.
 
 **What gets logged:**
-- You spawned a choppa
+- You spawned a choppa, and which one (Little Bird or classic)
 - You got in, and whether as the pilot or a passenger
 - A flight ended (logged by the pilot), with:
   - how long it lasted
@@ -75,6 +78,7 @@ The choppa keeps a tiny logbook and sends it to me, the author, purely because I
   - how many seconds you spent upside down
   - how much of the flight was in cockpit view versus chase view
   - how it ended: *landed*, *bailed* (pilot hopped out mid-air) or *ended abruptly*
+  - which choppa it was (Little Bird or classic)
 - A choppa's flight ended abruptly (logged by whichever game was flying it, even with nobody at the controls): how fast it was going, how many people were aboard, whether anyone was piloting, and how many items were in its pockets
 - Something was put into or taken out of a choppa pocket, and what the item was (the game's own name for it). Logged by the host, so each one counts once per lobby
 - A passenger's ride ended: how long it lasted and how it ended (*got out*, *jumped out* or *ended abruptly*)

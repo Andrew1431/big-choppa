@@ -34,6 +34,7 @@ internal static class ChoppaConfig
     public static ConfigEntry<float> ChaseDistance, ChaseHeight, CockpitEyeHeight;
     public static ConfigEntry<bool> SitWhileFlying;
     public static ConfigEntry<int> ChoppaLayer;
+    public static ConfigEntry<Vehicle> VehicleChoice;
 
     // Lights
     public static ConfigEntry<float> HeadlightIntensity, HeadlightRange, HeadlightAngle, HeadlightTilt, GlowIntensity;
@@ -108,6 +109,7 @@ internal static class ChoppaConfig
         CrashStunRadius = cfg.Bind(x, "StunRadius", 6f, "Your character gets knocked down if within this distance of a crash (pilot always is).");
 
         const string m = "Model";
+        VehicleChoice = cfg.Bind(m, "Vehicle", Vehicle.LittleBird, "Which choppa you call in: LittleBird (the MH-6) or Classic (the original spring-rider choppa). Applies to your next spawn; everyone in the lobby sees the one you picked.");
         HeliScale = cfg.Bind(m, "Scale", 0.6f, "Overall size of the choppa.");
         SeatHeightOffset = cfg.Bind(m, "SeatHeightOffset", 0.0f, "Raise/lower where you sit (metres, before Scale).");
         SeatForwardOffset = cfg.Bind(m, "SeatForwardOffset", 0.0f, "Move where you sit forward/back (metres, before Scale).");

@@ -7,7 +7,7 @@ namespace BigChoppa;
 // cloning one of the game's own materials, which is guaranteed to be compatible with its pipeline.
 internal static class ChoppaMaterials
 {
-    static readonly Dictionary<Color, Material> cache = new(), glowCache = new();
+    static readonly Dictionary<Color, Material> cache = new(), glowCache = new(), clearCache = new();
     static Shader shader;
     static Material template;
     static bool resolved;
@@ -30,6 +30,31 @@ internal static class ChoppaMaterials
         if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", 0.35f);
         mat.color = color;
         cache[color] = mat;
+        return mat;
+    }
+
+    // See-through (glass). Switches URP/Lit to its transparent surface type the way the material inspector would.
+    // If the game's build stripped the transparent shader variant this still renders, just opaque.
+    public static Material GetTransparent(Color color)
+    {
+        if (clearCache.TryGetValue(color, out var existing) && existing != null) return existing;
+        var opaque = Get(color);
+        if (opaque == null) return null;
+        var mat = new Material(opaque) { name = $"BigChoppa_Clear_{ColorUtility.ToHtmlStringRGBA(color)}" };
+        mat.SetFloat("_Surface", 1f);
+        mat.SetFloat("_Blend", 0f);
+        mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+        mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+        mat.SetFloat("_SrcBlendAlpha", (float)UnityEngine.Rendering.BlendMode.One);
+        mat.SetFloat("_DstBlendAlpha", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+        mat.SetFloat("_ZWrite", 0f);
+        mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        mat.DisableKeyword("_ALPHATEST_ON");
+        mat.SetOverrideTag("RenderType", "Transparent");
+        mat.SetShaderPassEnabled("DepthOnly", false);
+        mat.SetShaderPassEnabled("ShadowCaster", false);
+        mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+        clearCache[color] = mat;
         return mat;
     }
 
