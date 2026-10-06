@@ -40,7 +40,8 @@ internal static class ChoppaMaterials
         if (clearCache.TryGetValue(color, out var existing) && existing != null) return existing;
         var opaque = Get(color);
         if (opaque == null) return null;
-        var mat = new Material(opaque) { name = $"BigChoppa_Clear_{ColorUtility.ToHtmlStringRGBA(color)}" };
+        // ColorUtility.ToHtmlStringRGBA is stripped from the game build (Get gets away with the RGB one).
+        var mat = new Material(opaque) { name = $"BigChoppa_Clear_{ColorUtility.ToHtmlStringRGB(color)}_{Mathf.RoundToInt(color.a * 255f)}" };
         mat.SetFloat("_Surface", 1f);
         mat.SetFloat("_Blend", 0f);
         mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
@@ -50,9 +51,10 @@ internal static class ChoppaMaterials
         mat.SetFloat("_ZWrite", 0f);
         mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
         mat.DisableKeyword("_ALPHATEST_ON");
-        mat.SetOverrideTag("RenderType", "Transparent");
-        mat.SetShaderPassEnabled("DepthOnly", false);
-        mat.SetShaderPassEnabled("ShadowCaster", false);
+        // Nice-to-haves; any of these may be stripped from the game build too.
+        try { mat.SetOverrideTag("RenderType", "Transparent"); } catch (System.Exception e) { Plugin.Verbose($"Glass RenderType tag: {e.Message}"); }
+        try { mat.SetShaderPassEnabled("DepthOnly", false); mat.SetShaderPassEnabled("ShadowCaster", false); }
+        catch (System.Exception e) { Plugin.Verbose($"Glass shader passes: {e.Message}"); }
         mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
         clearCache[color] = mat;
         return mat;

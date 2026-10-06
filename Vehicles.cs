@@ -30,6 +30,7 @@ internal static class Vehicles
                 Plugin.L.LogError($"Building the Little Bird failed, using the classic choppa instead: {e}");
                 var model = heli.transform.Find("Model");
                 if (model != null) UnityEngine.Object.DestroyImmediate(model.gameObject);
+                heli.Scale = Scale(Vehicle.Classic);
             }
         }
         HeliModel.Build(heli, heli.Scale);
