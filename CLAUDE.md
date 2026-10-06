@@ -25,9 +25,10 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
   (gitignored). A push fails with a warning if the game is running on that machine (DLL locked) or the PC is offline.
 - `.\build.ps1 -InstallBepInEx` also copies the BepInEx loader + interop to the remote targets (first-time setup, or
   after a game update regenerates interop).
-- **Second-PC pushes are on hold.** Olga's install (mod + BepInEx) was removed again on 2026-10-05 after the 2.0.0
-  test. Her line in `remote-targets.txt` is commented out. To resume: uncomment it, close her game, run
-  `.uild.ps1 -InstallBepInEx`; she then launches from Steam (not r2modman) to get the dev build.
+- **Second-PC pushes are active again (2026-10-05, 3.0.0 networking tests).** Olga's line in `remote-targets.txt` is
+  uncommented and BepInEx + the dev build are back in her game folder; every `.uild.ps1` pushes to her (close her
+  game first). She launches from Steam (not r2modman) to get the dev build. To pause again: comment the line out and
+  remove BepInEx from her folder (see `DEV-NOTES.local.md`).
 - Default game path: `E:\SteamLibrary\steamapps\common\Big Walk` (`-GameDirectory` to override).
 - BepInEx location: the game folder's `BepInEx` if present, else the r2modman profile named **Dev**
   (`%APPDATA%\r2modmanPlus-local\BigWalk\profiles\Dev\BepInEx`); `-BepInExDirectory` overrides. The **Default**
