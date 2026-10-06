@@ -11,7 +11,9 @@ namespace BigChoppa;
 // world into a RenderTexture.
 internal sealed class ChoppaPreview
 {
-    const int Layer = 31;
+    // Default layer: the game's URP renderer may filter out unused high layers (31 drew nothing). The stage is 30 km
+    // up, past every other camera's far plane, so nothing else ever sees it.
+    const int Layer = 0;
     static readonly Vector3 Stage = new(0f, 30000f, 0f);
     static readonly Vector3 ViewDir = new Vector3(0.95f, 0.42f, 0.85f).normalized; // front-right, from above
     static readonly Vector3 KeyLight = new Vector3(0.35f, 1f, 0.55f).normalized;
@@ -70,7 +72,7 @@ internal sealed class ChoppaPreview
         cam.enabled = false;
         cam.cullingMask = 1 << Layer;
         cam.clearFlags = CameraClearFlags.SolidColor;
-        cam.backgroundColor = new Color(0f, 0f, 0f, 0f);
+        cam.backgroundColor = new Color(0f, 0f, 0f, 1f / 255f); // invisible, but tells Diagnose the camera ran
         cam.fieldOfView = 24f;
         cam.allowHDR = false;
         cam.allowMSAA = true;
@@ -111,9 +113,12 @@ internal sealed class ChoppaPreview
             t.ReadPixels(new Rect(0, 0, Texture.width, Texture.height), 0, 0);
             t.Apply();
             var px = t.GetPixels();
-            int solid = 0, coloured = 0;
-            foreach (var c in px) { if (c.a > 0.5f) solid++; if (c.r + c.g + c.b > 0.05f) coloured++; }
-            Plugin.L.LogInfo($"Preview (dev) {v}: {solid}/{px.Length} opaque, {coloured} coloured, cam enabled {cam?.enabled}, root active {root?.activeSelf}.");
+            int cleared = 0, solid = 0, coloured = 0;
+            foreach (var c in px) { if (c.a > 0f) cleared++; if (c.a > 0.5f) solid++; if (c.r + c.g + c.b > 0.05f) coloured++; }
+            var main = Camera.main;
+            Plugin.L.LogInfo($"Preview (dev) {v}: {cleared} cleared (camera ran if > 0), {solid}/{px.Length} opaque, {coloured} coloured; " +
+                             $"cam enabled {cam?.enabled}, root active {root?.activeSelf}, bounds {bounds}, dist {distance:0.0}; " +
+                             $"main cam mask {(main != null ? main.cullingMask.ToString("X8") : "none")}.");
             UnityEngine.Object.Destroy(t);
         }
         catch (Exception e) { Plugin.L.LogWarning($"Preview (dev) diagnose: {e.Message}"); }
