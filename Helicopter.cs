@@ -78,9 +78,8 @@ public class Helicopter : MonoBehaviour
 
     void FixedUpdate()
     {
-        if (Body == null || Broken) return;
+        if (Body == null || Broken || IsProxy) return;
         float dt = Time.fixedDeltaTime;
-        if (IsProxy) { ProxyStep(dt); return; }
 
         // Velocity here is the result of last physics step, so a big jump means we just hit something hard.
         Vector3 vNow = Body.linearVelocity;
@@ -141,6 +140,7 @@ public class Helicopter : MonoBehaviour
     void Update()
     {
         float dt = Time.deltaTime;
+        if (IsProxy && !Broken && Body != null) ProxyStep(dt);
         ChoppaAudio.Drive(this);
         if (MainRotor != null) MainRotor.Rotate(0f, RotorSpin * 900f * dt, 0f, Space.Self);
         if (TailRotor != null) TailRotor.Rotate(RotorSpin * 1600f * dt, 0f, 0f, Space.Self);
@@ -184,6 +184,16 @@ public class Helicopter : MonoBehaviour
 
     readonly List<Snap> snaps = new();
 
+    // Proxy playback runs on our own clock, in the owner's time. Snapshots are stamped with the owner's local physics
+    // time; offset = (our clock - their stamp), tracked as the lowest recent value so network jitter doesn't move it.
+    // playbackTime then eases toward where it should be instead of jumping, so the path is replayed at a steady pace.
+    double clockOffset, playbackTime;
+    bool hasClock;
+    float nextJitterLog;
+    int extrapolatedFrames, clockNudges;
+
+    static double LocalClock => Time.timeAsDouble;
+
     public void SetProxy(bool proxy)
     {
         if (proxy == IsProxy) return;
@@ -192,12 +202,14 @@ public class Helicopter : MonoBehaviour
         {
             Body.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
             Body.isKinematic = true;
-            snaps.Clear();
-            snaps.Add(new Snap { T = ChoppaNet.Time - ChoppaConfig.NetInterpDelay.Value, Pos = Body.position, Rot = Body.rotation, Spin = RotorSpin, Collective = Collective });
+            // Posed every rendered frame in Update, so Unity's interpolation would only fight it.
+            Body.interpolation = RigidbodyInterpolation.None;
+            ResetPlayback();
         }
         else
         {
             Body.isKinematic = false;
+            Body.interpolation = RigidbodyInterpolation.Interpolate;
             Body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
             if (snaps.Count > 0)
             {
@@ -210,10 +222,18 @@ public class Helicopter : MonoBehaviour
         }
     }
 
+    // A new owner stamps with a different clock; start over and hold still until their snapshots arrive.
+    public void ResetPlayback()
+    {
+        snaps.Clear();
+        hasClock = false;
+    }
+
     public void WriteState(System.IO.BinaryWriter w)
     {
         w.Write(Id);
-        w.Write(ChoppaNet.Time);
+        // Body state is the result of the last physics step, so stamp it with that step's time, not the frame's.
+        w.Write(Time.fixedTimeAsDouble);
         w.Write(Body.position);
         w.Write(Body.rotation);
         w.Write(Body.linearVelocity);
@@ -237,6 +257,19 @@ public class Helicopter : MonoBehaviour
         };
         if (!IsProxy) return;
 
+        double offset = LocalClock - s.T;
+        if (!hasClock || Math.Abs(offset - clockOffset) > 1.0)
+        {
+            if (hasClock) Plugin.Verbose($"Choppa {Id:X8}: owner clock jumped {offset - clockOffset:0.000}s, restarting playback.");
+            snaps.Clear();
+            clockOffset = offset;
+            playbackTime = s.T - ChoppaConfig.NetInterpDelay.Value;
+            hasClock = true;
+        }
+        // Follow faster packets at once, slower ones only gradually (so a lag spike doesn't shift the timeline).
+        else if (offset < clockOffset) clockOffset = offset;
+        else clockOffset += (offset - clockOffset) * 0.02;
+
         int i = snaps.Count;
         while (i > 0 && snaps[i - 1].T > s.T) i--;
         if (i > 0 && snaps[i - 1].T == s.T) return;
@@ -245,11 +278,21 @@ public class Helicopter : MonoBehaviour
     }
 
     // Snapshot interpolation: show where the owner had it InterpolationDelay seconds ago, extrapolating
-    // briefly with the last known velocity if updates run late.
+    // briefly with the last known velocity if updates run late. Runs per rendered frame so the camera riding
+    // on it moves in lockstep.
     void ProxyStep(float dt)
     {
-        if (snaps.Count == 0) return;
-        double t = ChoppaNet.Time - ChoppaConfig.NetInterpDelay.Value;
+        if (snaps.Count == 0 || !hasClock) return;
+
+        double wanted = LocalClock - clockOffset - ChoppaConfig.NetInterpDelay.Value;
+        double err = wanted - playbackTime;
+        if (Math.Abs(err) > 0.5) playbackTime = wanted;
+        else
+        {
+            if (Math.Abs(err) > 0.01) clockNudges++;
+            playbackTime += dt * (1.0 + Math.Clamp(err * 0.5, -0.05, 0.05));
+        }
+        double t = playbackTime;
 
         while (snaps.Count > 2 && snaps[1].T <= t) snaps.RemoveAt(0);
 
@@ -258,25 +301,39 @@ public class Helicopter : MonoBehaviour
         if (snaps.Count >= 2 && t >= a.T)
         {
             Snap b = snaps[1];
-            float f = (float)((t - a.T) / Math.Max(1e-4, b.T - a.T));
+            float span = (float)Math.Max(1e-4, b.T - a.T);
+            float f = (float)((t - a.T) / span);
             if (f <= 1f)
             {
-                pos = Vector3.LerpUnclamped(a.Pos, b.Pos, f);
+                // Cubic Hermite through both ends' velocities: the path curves through turns instead of kinking
+                // at every snapshot, which a passenger's camera shows as a shudder.
+                float f2 = f * f, f3 = f2 * f;
+                pos = (2f * f3 - 3f * f2 + 1f) * a.Pos + (f3 - 2f * f2 + f) * span * a.Vel
+                    + (-2f * f3 + 3f * f2) * b.Pos + (f3 - f2) * span * b.Vel;
                 rot = Quaternion.Slerp(a.Rot, b.Rot, f);
                 vel = Vector3.Lerp(a.Vel, b.Vel, f);
                 RotorSpin = Mathf.Lerp(a.Spin, b.Spin, f);
                 Collective = Mathf.Lerp(a.Collective, b.Collective, f);
             }
-            else Extrapolate(b, t, out pos, out rot, out vel);
+            else { Extrapolate(b, t, out pos, out rot, out vel); extrapolatedFrames++; }
         }
-        else if (t >= a.T) Extrapolate(a, t, out pos, out rot, out vel);
+        else if (t >= a.T) { Extrapolate(a, t, out pos, out rot, out vel); extrapolatedFrames++; }
         else { pos = a.Pos; rot = a.Rot; vel = a.Vel; RotorSpin = a.Spin; Collective = a.Collective; }
 
-        Body.MovePosition(pos);
-        Body.MoveRotation(rot);
+        transform.SetPositionAndRotation(pos, rot);
+        Body.position = pos;
+        Body.rotation = rot;
 
-        smoothedAccel = Vector3.Lerp(smoothedAccel, (vel - lastVelocity) / dt, 0.2f);
+        if (dt > 1e-5f) smoothedAccel = Vector3.Lerp(smoothedAccel, (vel - lastVelocity) / dt, 0.2f);
         lastVelocity = vel;
+
+        if (ChoppaConfig.VerboseLogging.Value && Time.unscaledTime >= nextJitterLog)
+        {
+            if (extrapolatedFrames > 0 || clockNudges > 0)
+                Plugin.Verbose($"Choppa {Id:X8} playback: {extrapolatedFrames} extrapolated frame(s), {clockNudges} clock correction(s) in 2 s, buffer {snaps.Count}, lag {err * 1000:0} ms.");
+            extrapolatedFrames = clockNudges = 0;
+            nextJitterLog = Time.unscaledTime + 2f;
+        }
     }
 
     void Extrapolate(Snap s, double t, out Vector3 pos, out Quaternion rot, out Vector3 vel)

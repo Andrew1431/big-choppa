@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.0
+
+- Much smoother ride as a passenger (or watching someone else fly), especially at speed and in turns.
+- Everyone in the lobby needs 1.3.0; older versions won't see your choppas.
+
 ## 1.2.1
 
 - The choppa is smaller by default, which suits the world much better. `[Model] Scale` changed from 1.0 to 0.6

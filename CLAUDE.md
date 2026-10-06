@@ -25,9 +25,9 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
   (gitignored). A push fails with a warning if the game is running on that machine (DLL locked) or the PC is offline.
 - `.\build.ps1 -InstallBepInEx` also copies the BepInEx loader + interop to the remote targets (first-time setup, or
   after a game update regenerates interop).
-- **Second-PC pushes are on hold.** Olga's install (mod + BepInEx) was removed on 2026-10-03; she'll use the modpack.
-  Her line in `remote-targets.txt` is commented out, so builds only install locally. Don't push to her machine until
-  the owner wants multiplayer testing again; then uncomment it and run `.\build.ps1 -InstallBepInEx`.
+- **Second PC (Olga) is active again** (re-enabled 2026-10-05 for passenger-smoothness testing): BepInEx + the dev build
+  are installed directly in her Steam game folder, so she launches Big Walk from Steam (not r2modman) to get the dev
+  build. Her game must be closed for a push. To pause again, comment out her line in `remote-targets.txt`.
 - Default game path: `E:\SteamLibrary\steamapps\common\Big Walk` (`-GameDirectory` to override).
 - BepInEx location: the game folder's `BepInEx` if present, else the r2modman profile named **Dev**
   (`%APPDATA%\r2modmanPlus-local\BigWalk\profiles\Dev\BepInEx`); `-BepInExDirectory` overrides. The **Default**
@@ -72,7 +72,8 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
   latest with `https://thunderstore.io/api/experimental/package/BepInEx/BepInExPack_IL2CPP/`.
 - **Always load-test in the Dev profile before packaging.** A config section named "Pilot's Logbook" once broke
   loading entirely: BepInEx section/key names can't contain `= \n \t \ " ' [ ]`.
-- Published so far: 1.0.0 (no logbook). 1.0.1 adds the Pilot Logbook. 1.0.2 (README stats card only, no code change) is packaged once the card is live. 1.0.3 adds night lights, live config reload and the CenterOfMassHeight migration. 1.1.0 adds choppa pockets. 1.1.1 adds pocket/crew logbook analytics (no gameplay change). 1.1.2 fixes bonk sounds (Collision getters are stripped) and makes dev builds log instead of send logbook events. 1.1.3 adds FreelookMouseSensitivity. 1.2.0 adds the fly-in (F8 calls the choppa in on autopilot; `[Controls] FlyIn`). 1.2.1 shrinks the default Scale to 0.6 (migrated) and shows your head/body in the chase camera. 1.1.4 makes pockets inventory homes (`isInventory = true`) so pocketed items save to the lost & found (an earlier assumption that they couldn't was never tested).
+- Published so far: 1.0.0 (no logbook). 1.0.1 adds the Pilot Logbook. 1.0.2 (README stats card only, no code change) is packaged once the card is live. 1.0.3 adds night lights, live config reload and the CenterOfMassHeight migration. 1.1.0 adds choppa pockets. 1.1.1 adds pocket/crew logbook analytics (no gameplay change). 1.1.2 fixes bonk sounds (Collision getters are stripped) and makes dev builds log instead of send logbook events. 1.1.3 adds FreelookMouseSensitivity. 1.2.0 adds the fly-in (F8 calls the choppa in on autopilot; `[Controls] FlyIn`). 1.2.1 shrinks the default Scale to 0.6 (migrated) and shows your head/body in the chase camera. 1.3.0 (unreleased) smooths proxy playback: owner stamps snapshots with its physics time, receivers replay on a
+  local clock with a min-tracked offset, Hermite interpolation, posed per frame in `Update` (protocol 2). 1.1.4 makes pockets inventory homes (`isInventory = true`) so pocketed items save to the lost & found (an earlier assumption that they couldn't was never tested).
 - Bump `ChoppaNet.Protocol` whenever the wire format changes; mismatched peers are ignored by the host.
 
 ## Code map

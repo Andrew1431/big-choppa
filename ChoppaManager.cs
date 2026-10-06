@@ -239,6 +239,7 @@ public class ChoppaManager : MonoBehaviour
             {
                 uint id = r.ReadUInt32(), owner = r.ReadUInt32();
                 if (!helis.TryGetValue(id, out var h)) break;
+                if (h.Owner != owner) h.ResetPlayback();
                 h.Owner = owner;
                 h.SetProxy(owner != Me);
                 Plugin.Verbose($"Choppa {id:X8} now simulated by {NameOf(owner)}.");
