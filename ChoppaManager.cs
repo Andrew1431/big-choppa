@@ -60,7 +60,7 @@ public class ChoppaManager : MonoBehaviour
     void Start()
     {
         showHud = ChoppaConfig.ShowHud.Value;
-        menu = new ChoppaMenu(RequestSpawn);
+        menu = new ChoppaMenu(RequestSpawn, MenuStatus);
         Helicopter.Crashed += OnOwnCrash;
         ChoppaNet.ServerReceived = ChoppaServer.OnMessage;
         ChoppaNet.ClientReceived = OnClientMessage;
@@ -666,6 +666,19 @@ public class ChoppaManager : MonoBehaviour
         byte s = (byte)seat;
         uint id = h.Id;
         ChoppaNet.ToServer(ChoppaNet.Write(Msg.Board, w => { w.Write(id); w.Write(s); }), true);
+    }
+
+    string MenuStatus()
+    {
+        string mode = ChoppaNet.Mode switch
+        {
+            ChoppaNet.NetMode.Host => "HOSTING",
+            ChoppaNet.NetMode.Client => "ONLINE",
+            ChoppaNet.NetMode.Connecting => "CONNECTING",
+            _ => "SOLO",
+        };
+        int n = helis.Values.Count(h => h != null && !h.Broken);
+        return $"{mode}  ·  {n} CHOPPA{(n == 1 ? "" : "S")} OUT";
     }
 
     static string FullMessage(Helicopter h) =>

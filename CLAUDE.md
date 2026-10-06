@@ -90,7 +90,11 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
   seat count and scale (`[Model] Scale` × 1/0.6 for the Little Bird, which is modelled at real size), and
   `LittleBirdModel`, which builds the MH-6 from the embedded `Resources/mh6.bin` using its named empties.
   `Vehicles.Catalog` lists what the F8 chooser (`ChoppaMenu.cs`, IMGUI Rects, game menu mode while open) offers,
-  each with Call In / Spawn; adding a vehicle there gives it a card. Each choppa is built as its spawner chose, so
+  each with Call In / Spawn and a number key; adding a vehicle there gives it a card. `ChoppaUi.cs` makes the
+  menu's shapes (SDF rounded-rect 9-slice textures, shadows, gradients) and Windows fonts (Bahnschrift, Segoe UI,
+  Cascadia Mono/Consolas, falling back to Unity's). `ChoppaPreview.cs` renders each card's turntable: the vehicle
+  is built on an inactive dummy, flattened into one mesh with lighting baked into URP/Unlit colours, and drawn by
+  a private camera at y=30000 into a RenderTexture (independent of the scene's lights and time of day). Each choppa is built as its spawner chose, so
   mixed lobbies work. (`[Model] Vehicle` and `[Controls] FlyIn` were removed in 3.0.0.)
 - `MeshModel.cs`: reads `mh6.bin` and instantiates nodes/meshes. Source is `model/mh6.blend`; re-export after any
   model change with `model/export_mh6.py` (Blender: `blender --background model/mh6.blend --python

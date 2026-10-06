@@ -84,6 +84,35 @@ internal static class ChoppaMaterials
         return mat;
     }
 
+    // Exactly this colour, no lighting (chooser previews bake their own). Alpha < 1 makes it see-through.
+    static readonly Dictionary<Color, Material> flatCache = new();
+    public static Material GetFlat(Color color)
+    {
+        if (flatCache.TryGetValue(color, out var existing) && existing != null) return existing;
+        var unlit = Shader.Find("Universal Render Pipeline/Unlit");
+        Material mat;
+        if (unlit == null) mat = color.a < 0.99f ? GetTransparent(color) : Get(color);
+        else
+        {
+            mat = new Material(unlit) { name = $"BigChoppa_Flat_{ColorUtility.ToHtmlStringRGB(color)}_{Mathf.RoundToInt(color.a * 255f)}" };
+            mat.SetColor("_BaseColor", color);
+            if (color.a < 0.99f)
+            {
+                mat.SetFloat("_Surface", 1f);
+                mat.SetFloat("_Blend", 0f);
+                mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                mat.SetFloat("_SrcBlendAlpha", (float)UnityEngine.Rendering.BlendMode.One);
+                mat.SetFloat("_DstBlendAlpha", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                mat.SetFloat("_ZWrite", 0f);
+                mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            }
+        }
+        if (mat != null) flatCache[color] = mat;
+        return mat;
+    }
+
     static void Resolve()
     {
         if (resolved) return;
