@@ -9,6 +9,8 @@
   in and lands near you) or Spawn (it appears right in front of you). Each choppa is built the way its owner
   picked, so mixed lobbies work.
 - `[Controls] FlyIn` is gone: choose Call In or Spawn in the chooser instead.
+- Quieter choppa: `[Audio] Volume` changed from 0.8 to 0.4 (updated automatically unless you had changed it
+  yourself); set it back to 0.8 for the old loudness.
 - Everyone in the lobby needs 3.0.0 or newer; older versions won't see your choppas.
 
 ## 2.0.0

@@ -57,7 +57,7 @@ internal static class ChoppaConfig
 #endif
 
     // Bump when adding a migration below.
-    const int CurrentConfigVersion = 2;
+    const int CurrentConfigVersion = 3;
 
     public static void Bind(ConfigFile cfg)
     {
@@ -125,7 +125,7 @@ internal static class ChoppaConfig
         GlowIntensity = cfg.Bind(li, "CabinGlow", 2f, "Faint always-on cabin light so a choppa is visible in the dark. 0 = off.");
 
         const string a = "Audio";
-        AudioVolume = cfg.Bind(a, "Volume", 0.8f, "Choppa sound volume (rotor, motor, bonks). 0 = silent.");
+        AudioVolume = cfg.Bind(a, "Volume", 0.4f, "Choppa sound volume (rotor, motor, bonks). 0 = silent.");
         AudioMaxDistance = cfg.Bind(a, "MaxHearingDistance", 250f, "How far away you can hear a choppa (metres).");
 
         const string l = "Pilot Logbook"; // BepInEx forbids ' in section names
@@ -195,6 +195,7 @@ internal static class ChoppaConfig
 
         if (from < 1) Upgrade(CenterOfMassHeight, 1.4f);
         if (from < 2) Upgrade(HeliScale, 1.0f);
+        if (from < 3) Upgrade(AudioVolume, 0.8f);
 
         version.Value = CurrentConfigVersion;
     }

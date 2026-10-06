@@ -126,7 +126,7 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
   live stats card at the top of both READMEs) and `/stats.json`, from a HogQL query against PostHog project 643292,
   cached 10 min. The PostHog personal API key (read-only query scope) is the Worker secret `POSTHOG_PERSONAL_KEY`;
   it must never go in the repo or chat. `node preview.js` renders the card with fake numbers; `npx wrangler deploy`
-  ships it (needs `npx wrangler login` first). New logbook stats on the card need both the query and `card.js` updated. `npx wrangler versions upload` gives a preview URL to check a query change against real data before `deploy`.
+  ships it (needs `npx wrangler login` first). New logbook stats on the card need both the query and `card.js` updated. The card's "choppas called in, by model" bars grow a row per vehicle id; give a new vehicle a name and colour in `card.js` `VEHICLES` (otherwise it's title-cased in a stripe colour). `npx wrangler versions upload` gives a preview URL to check a query change against real data before `deploy`.
 - `DevAutoHost.cs`: dev-build-only menu skipper (see Build, deploy, test).
 - `DevTime.cs`: dev-build-only `,` / `.` = time of day -/+ 1 h via Enviro (`EnviroManager.Time.SetTimeOfDay`); falls
   back to `SkyManager.SetFixedTime` if the game snaps it back.
