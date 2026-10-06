@@ -16,7 +16,7 @@ internal static class ChoppaConfig
     public static ConfigEntry<float> MouseSensitivity, FreelookMouseSensitivity;
     public static ConfigEntry<bool> InvertPitch, InvertRoll;
     public static ConfigEntry<InputBackend> Backend;
-    public static ConfigEntry<bool> RequireCursorLock, FlyIn;
+    public static ConfigEntry<bool> RequireCursorLock;
 
     // Flight
     public static ConfigEntry<float> MaxLiftG, CollectiveRate, MaxPitchRollRate, YawRate, ControlResponse;
@@ -57,7 +57,7 @@ internal static class ChoppaConfig
 #endif
 
     // Bump when adding a migration below.
-    const int CurrentConfigVersion = 2;
+    const int CurrentConfigVersion = 3;
 
     public static void Bind(ConfigFile cfg)
     {
@@ -66,8 +66,7 @@ internal static class ChoppaConfig
         CollectiveDownKey = cfg.Bind(c, "CollectiveDown", KeyCode.S, "Hold to lower collective (less lift).");
         PedalLeftKey = cfg.Bind(c, "PedalLeft", KeyCode.A, "Left anti-torque pedal (yaw left).");
         PedalRightKey = cfg.Bind(c, "PedalRight", KeyCode.D, "Right anti-torque pedal (yaw right).");
-        SpawnKey = cfg.Bind(c, "Spawn", KeyCode.F8, "Call in a choppa (replaces your previous one if nobody is in it).");
-        FlyIn = cfg.Bind(c, "FlyIn", true, "The choppa flies in from the distance and lands near you. Off = it appears right in front of you.");
+        SpawnKey = cfg.Bind(c, "Spawn", KeyCode.F8, "Open the choppa chooser: call one in or spawn it in front of you (replaces your previous one if nobody is in it).");
         EnterExitKey = cfg.Bind(c, "EnterExit", KeyCode.G, "Board or leave the choppa.");
         ResetKey = cfg.Bind(c, "ResetUpright", KeyCode.F9, "Flip the choppa back upright where it is.");
         CameraKey = cfg.Bind(c, "ToggleCamera", KeyCode.V, "Switch between chase and cockpit camera.");
@@ -126,7 +125,7 @@ internal static class ChoppaConfig
         GlowIntensity = cfg.Bind(li, "CabinGlow", 2f, "Faint always-on cabin light so a choppa is visible in the dark. 0 = off.");
 
         const string a = "Audio";
-        AudioVolume = cfg.Bind(a, "Volume", 0.8f, "Choppa sound volume (rotor, motor, bonks). 0 = silent.");
+        AudioVolume = cfg.Bind(a, "Volume", 0.4f, "Choppa sound volume (rotor, motor, bonks). 0 = silent.");
         AudioMaxDistance = cfg.Bind(a, "MaxHearingDistance", 250f, "How far away you can hear a choppa (metres).");
 
         const string l = "Pilot Logbook"; // BepInEx forbids ' in section names
@@ -196,6 +195,7 @@ internal static class ChoppaConfig
 
         if (from < 1) Upgrade(CenterOfMassHeight, 1.4f);
         if (from < 2) Upgrade(HeliScale, 1.0f);
+        if (from < 3) Upgrade(AudioVolume, 0.8f);
 
         version.Value = CurrentConfigVersion;
     }

@@ -21,7 +21,7 @@ internal static class ChoppaCrash
         Vector3 velocity = heli.ImpactVelocity;
         heli.Body.isKinematic = true; // stop a proxy's interpolation fighting the debris
         Vector3 center = heli.transform.TransformPoint(heli.Body.centerOfMass);
-        float s = ChoppaConfig.HeliScale.Value;
+        float s = heli.Scale;
         float life = ChoppaConfig.DebrisSeconds.Value;
 
         ChoppaAudio.PlayCrash(center);
@@ -44,7 +44,7 @@ internal static class ChoppaCrash
         {
             t.SetParent(null, true);
             foreach (var r in t.GetComponentsInChildren<MeshRenderer>(true))
-                if (r.GetComponent<Collider>() == null) r.gameObject.AddComponent<BoxCollider>();
+                if (r.GetComponent<Collider>() == null) AddCollider(r.gameObject, heli.Vehicle);
 
             var rb = t.gameObject.AddComponent<Rigidbody>();
             bool isRotor = t == heli.MainRotor || t == heli.TailRotor;
@@ -73,5 +73,18 @@ internal static class ChoppaCrash
         }
 
         Object.Destroy(heli.gameObject);
+    }
+
+    // The Little Bird's curved shell panels tumble far better as hulls than as their bounding boxes.
+    static void AddCollider(GameObject go, Vehicle vehicle)
+    {
+        var mesh = go.GetComponent<MeshFilter>()?.sharedMesh;
+        if (vehicle == Vehicle.LittleBird && mesh != null && mesh.isReadable)
+        {
+            var mc = go.AddComponent<MeshCollider>();
+            mc.sharedMesh = mesh;
+            mc.convex = true;
+        }
+        else go.AddComponent<BoxCollider>();
     }
 }

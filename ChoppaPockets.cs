@@ -9,13 +9,14 @@ namespace BigChoppa;
 // Six side pockets (three a side) that hold the same items a backpack does. Each pocket is one of the game's own
 // PropHomes, so stowing and grabbing use the game's normal place/pick-up and its networking: the host pins the item
 // and everyone else resolves the home by ticket. The ticket comes from the choppa id, so every PC maps it to its own
-// copy of the same pocket. The game doesn't count pocketed items as held, so they aren't saved.
+// copy of the same pocket. Pocketed items count as held, so the game saves them to the lost & found.
 internal sealed class ChoppaPockets
 {
     public const int Count = 6;
-    const int TicketBase = 60000, Slots = 900; // tickets 60000..65399
+    // Each choppa owns a block of tickets: 0-5 pockets, 6-9 bench spots (ChoppaBenches). Tickets 60000..65529.
+    const int TicketBase = 60000, TicketsPerChoppa = 10, Slots = 553;
     public static int Slot(uint id) => (int)(id % Slots);
-    static ushort Ticket(uint id, int i) => (ushort)(TicketBase + Slot(id) * Count + i);
+    internal static ushort Ticket(uint id, int i) => (ushort)(TicketBase + Slot(id) * TicketsPerChoppa + i);
 
     // Copied from one of the game's backpack pockets the first time we need it.
     static bool templateSearched;
@@ -39,27 +40,41 @@ internal sealed class ChoppaPockets
         }
     }
 
-    public static ChoppaPockets Build(Transform model, Helicopter heli)
+    // Hang = where the item hangs; the box (relative to Hang) is what you aim at to stow or grab, normally the pouch.
+    public readonly record struct PocketSpec(Vector3 Hang, Vector3 BoxCenter, Vector3 BoxSize);
+
+    // The classic choppa's pouches: three a side, built from primitives.
+    public static PocketSpec[] BuildClassicPouches(Transform model)
     {
-        var p = new ChoppaPockets { heli = heli };
         var pouch = new Color(0.2f, 0.55f, 0.95f);
         var flap = new Color(0.12f, 0.35f, 0.7f);
+        var specs = new PocketSpec[Count];
         int i = 0;
         foreach (float side in new[] { -1f, 1f })
         foreach (float z in new[] { 0.95f, 0.25f, -0.45f })
         {
             HeliModel.Part(model, PrimitiveType.Cube, "Pocket", new(side * 1.05f, 0.8f, z), Vector3.zero, new(0.12f, 0.45f, 0.5f), pouch, false);
             HeliModel.Part(model, PrimitiveType.Cube, "PocketFlap", new(side * 1.09f, 1.0f, z), new(0f, 0f, side * -12f), new(0.1f, 0.12f, 0.54f), flap, false);
+            // The item hangs just outside the pouch; the box covers the pouch itself so the hanging item stays grabbable.
+            specs[i++] = new PocketSpec(new(side * 1.32f, 0.8f, z), new(side * -0.27f, 0f, 0f), new(0.2f, 0.5f, 0.55f));
+        }
+        return specs;
+    }
 
+    public static ChoppaPockets Build(Transform model, Helicopter heli, PocketSpec[] specs)
+    {
+        var p = new ChoppaPockets { heli = heli };
+        for (int i = 0; i < Count && i < specs.Length; i++)
+        {
             // Built inactive so PropHome wakes up with our ticket already set (see Activate).
             var go = new GameObject($"PocketHome{i}");
             go.SetActive(false);
             go.transform.SetParent(model, false);
-            go.transform.localPosition = new(side * 1.32f, 0.8f, z); // where the item hangs, just outside the pouch
+            go.transform.localPosition = specs[i].Hang;
             var box = go.AddComponent<BoxCollider>();
-            box.center = new(side * -0.27f, 0f, 0f); // the pouch itself, so the hanging item stays grabbable
-            box.size = new(0.2f, 0.5f, 0.55f);
-            p.homes[i++] = go.AddComponent<PropHome>();
+            box.center = specs[i].BoxCenter;
+            box.size = specs[i].BoxSize;
+            p.homes[i] = go.AddComponent<PropHome>();
         }
         return p;
     }
@@ -72,6 +87,7 @@ internal sealed class ChoppaPockets
         for (int i = 0; i < Count; i++)
         {
             var home = homes[i];
+            if (home == null) continue;
             ushort ticket = Ticket(heli.Id, i);
             try
             {
@@ -118,12 +134,11 @@ internal sealed class ChoppaPockets
     }
 
     // A ticket left behind by a destroyed choppa is fine to reuse; one the game uses is not.
-    static bool FreeTicket(TicketOffice office, ushort ticket)
+    internal static bool FreeTicket(TicketOffice office, ushort ticket)
     {
         if (office == null || !office.tickets.ContainsKey(ticket)) return true;
         var existing = office.tickets[ticket];
-        var home = existing?.TryCast<PropHome>();
-        if (existing != null && home != null) return false;
+        if (existing != null && (existing.TryCast<PropHome>() != null || existing.TryCast<PlayerPose>() != null)) return false;
         office.tickets.Remove(ticket);
         return true;
     }

@@ -48,3 +48,4 @@ remote-targets.txt
 # Thunderstore package output
 dist/
 
+*.blend1

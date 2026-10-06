@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace BigChoppa;
@@ -25,39 +27,54 @@ internal sealed class ChoppaLights
     float phase;
     bool wasPowered = true; // forces the first Drive to apply the off state
 
-    public static ChoppaLights Build(Transform model, uint id)
+    public enum LensKind { Steady, Beacon, Strobe }
+    public readonly record struct LensSpec(string Name, Vector3 Pos, float Size, Color Color, LensKind Kind);
+
+    // Where everything goes, in model space before scale.
+    public sealed class Layout
+    {
+        public readonly List<LensSpec> Lenses = new();
+        public Vector3 Headlight, Glow, BeaconGlow;
+    }
+
+    public static Layout Classic()
+    {
+        var l = new Layout
+        {
+            // Just in front of the nose so the beam doesn't start inside it.
+            Headlight = new(0f, 0.75f, 2.15f),
+            Glow = new(0f, 2.4f, 0.1f),
+            BeaconGlow = new(0f, 3.45f, -0.95f),
+        };
+        l.Lenses.Add(new("NavLeft", new(-1.03f, 1.2f, 1.0f), 0.16f, NavRed, LensKind.Steady));
+        l.Lenses.Add(new("NavRight", new(1.03f, 1.2f, 1.0f), 0.16f, NavGreen, LensKind.Steady));
+        l.Lenses.Add(new("TailLight", new(0f, 1.15f, -4.85f), 0.14f, White, LensKind.Steady));
+        l.Lenses.Add(new("HeadlightLeft", new(-0.5f, 0.75f, 1.92f), 0.24f, White, LensKind.Steady));
+        l.Lenses.Add(new("HeadlightRight", new(0.5f, 0.75f, 1.92f), 0.24f, White, LensKind.Steady));
+        l.Lenses.Add(new("BeaconTop", new(0f, 3.25f, -0.95f), 0.22f, NavRed, LensKind.Beacon));
+        l.Lenses.Add(new("BeaconBelly", new(0f, 0.48f, -0.5f), 0.2f, NavRed, LensKind.Beacon));
+        l.Lenses.Add(new("StrobeLeft", new(-0.72f, 1.2f, -4.3f), 0.12f, White, LensKind.Strobe));
+        l.Lenses.Add(new("StrobeRight", new(0.72f, 1.2f, -4.3f), 0.12f, White, LensKind.Strobe));
+        return l;
+    }
+
+    public static ChoppaLights Build(Transform model, uint id, float scale, Layout layout)
     {
         var l = new ChoppaLights { phase = (id % 1000) * 0.137f };
+        Lens[] Make(LensKind kind) => layout.Lenses.Where(s => s.Kind == kind).Select(s => MakeLens(model, s.Name, s.Pos, s.Size, s.Color)).ToArray();
+        l.steady = Make(LensKind.Steady);
+        l.beacons = Make(LensKind.Beacon);
+        l.strobes = Make(LensKind.Strobe);
 
-        l.steady = new[]
-        {
-            MakeLens(model, "NavLeft", new(-1.03f, 1.2f, 1.0f), 0.16f, NavRed),
-            MakeLens(model, "NavRight", new(1.03f, 1.2f, 1.0f), 0.16f, NavGreen),
-            MakeLens(model, "TailLight", new(0f, 1.15f, -4.85f), 0.14f, White),
-            MakeLens(model, "HeadlightLeft", new(-0.5f, 0.75f, 1.92f), 0.24f, White),
-            MakeLens(model, "HeadlightRight", new(0.5f, 0.75f, 1.92f), 0.24f, White),
-        };
-        l.beacons = new[]
-        {
-            MakeLens(model, "BeaconTop", new(0f, 3.25f, -0.95f), 0.22f, NavRed),
-            MakeLens(model, "BeaconBelly", new(0f, 0.48f, -0.5f), 0.2f, NavRed),
-        };
-        l.strobes = new[]
-        {
-            MakeLens(model, "StrobeLeft", new(-0.72f, 1.2f, -4.3f), 0.12f, White),
-            MakeLens(model, "StrobeRight", new(0.72f, 1.2f, -4.3f), 0.12f, White),
-        };
-
-        // Just in front of the nose so the beam doesn't start inside it. Tilted down a touch to light the ground ahead.
-        l.headlight = MakeLight(model, "Headlight", new(0f, 0.75f, 2.15f), LightType.Spot, White);
+        // Tilted down a touch (in Drive) to light the ground ahead.
+        l.headlight = MakeLight(model, "Headlight", layout.Headlight, LightType.Spot, White);
         l.headlight.renderMode = LightRenderMode.ForcePixel; // never drop it to the per-object light limit
 
-        float s = ChoppaConfig.HeliScale.Value;
-        l.glow = MakeLight(model, "CabinGlow", new(0f, 2.4f, 0.1f), LightType.Point, Warm);
-        l.glow.range = 6f * s;
+        l.glow = MakeLight(model, "CabinGlow", layout.Glow, LightType.Point, Warm);
+        l.glow.range = 6f * scale;
 
-        l.beaconLight = MakeLight(model, "BeaconGlow", new(0f, 3.45f, -0.95f), LightType.Point, NavRed);
-        l.beaconLight.range = 10f * s;
+        l.beaconLight = MakeLight(model, "BeaconGlow", layout.BeaconGlow, LightType.Point, NavRed);
+        l.beaconLight.range = 10f * scale;
         l.beaconLight.intensity = 3f;
         return l;
     }

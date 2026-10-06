@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -11,22 +12,23 @@ public class Helicopter : MonoBehaviour
 {
     public Helicopter(IntPtr ptr) : base(ptr) { }
 
-    public const int SeatCount = 3; // 0 = pilot, 1-2 = rear bench
-
     public uint Id;
+    public Vehicle Vehicle;
+    public float Scale;     // Model scale: the config's Scale times the vehicle's own factor
     public uint Owner;      // player netId whose PC simulates this choppa
     public bool IsProxy;    // true = someone else simulates it; we just replay their snapshots
-    public uint[] Occupants = new uint[SeatCount];
+    public uint[] Occupants; // seat 0 = pilot; sized by the vehicle's seat count (the host agrees)
 
     public Rigidbody Body;
     public AudioSource RotorAudio, TurbineAudio;
     public Transform MainRotor, TailRotor;
-    public Transform[] Seats, Exits;
+    public Transform[] Seats, Exits; // may be shorter than Occupants if a model failed to build
     public Transform PilotSeat => Seats[0];
     public Transform[] Pupils;
     public Vector3[] PupilRest;
     internal ChoppaLights Lights;
     internal ChoppaPockets Pockets;
+    internal ChoppaBenches Benches; // Little Bird only
 
     public bool EngineOn;
     public float Collective;   // 0..1
@@ -46,7 +48,7 @@ public class Helicopter : MonoBehaviour
 
     public float HoverCollective => 1f / Mathf.Max(0.01f, ChoppaConfig.MaxLiftG.Value);
 
-    public static Helicopter Build(uint id, Vector3 position, Quaternion rotation, int layer, Scene scene)
+    public static Helicopter Build(uint id, Vehicle vehicle, Vector3 position, Quaternion rotation, int layer, Scene scene)
     {
         var root = new GameObject($"BigChoppa {id:X8}");
         if (scene.IsValid() && scene.isLoaded) SceneManager.MoveGameObjectToScene(root, scene);
@@ -61,18 +63,22 @@ public class Helicopter : MonoBehaviour
 
         var heli = root.AddComponent<Helicopter>();
         heli.Id = id;
+        heli.Vehicle = vehicle;
+        heli.Scale = Vehicles.Scale(vehicle);
+        heli.Occupants = new uint[Vehicles.SeatCount(vehicle)];
         heli.Body = body;
         heli.impactGraceUntil = Time.time + 1.5f;
-        HeliModel.Build(heli, ChoppaConfig.HeliScale.Value);
+        Vehicles.Build(heli);
         foreach (var t in root.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = layer;
         ChoppaPhysics.CollideWithEverything(root);
         heli.Pockets?.Activate();
+        heli.Benches?.Activate();
         ChoppaAudio.Attach(heli);
         ChoppaBonker.Add(root, 0.9f, 2.5f);
 
         // Pivot about halfway between skids and rotor so mouse pitch/roll turns it around its middle.
         body.automaticCenterOfMass = false;
-        body.centerOfMass = new Vector3(0f, ChoppaConfig.CenterOfMassHeight.Value, 0.1f) * ChoppaConfig.HeliScale.Value;
+        body.centerOfMass = new Vector3(0f, ChoppaConfig.CenterOfMassHeight.Value, 0.1f) * heli.Scale;
         return heli;
     }
 
@@ -146,7 +152,7 @@ public class Helicopter : MonoBehaviour
         if (TailRotor != null) TailRotor.Rotate(RotorSpin * 1600f * dt, 0f, 0f, Space.Self);
         // Proxies don't know EngineOn, but their synced rotor spin says whether someone's flying.
         Lights?.Drive(EngineOn || RotorSpin > 0.1f);
-        if (!Broken) Pockets?.Tick();
+        if (!Broken) { Pockets?.Tick(); Benches?.Tick(); }
 
         // Googly eyes slosh against acceleration.
         if (Pupils != null)
@@ -161,7 +167,7 @@ public class Helicopter : MonoBehaviour
 
     bool CheckGrounded()
     {
-        float s = ChoppaConfig.HeliScale.Value;
+        float s = Scale;
         Vector3 origin = transform.position + transform.up * (0.5f * s);
         foreach (var h in Physics.RaycastAll(origin, -transform.up, 0.8f * s, ~0, QueryTriggerInteraction.Ignore))
         {
@@ -345,6 +351,9 @@ public class Helicopter : MonoBehaviour
         RotorSpin = s.Spin;
         Collective = s.Collective;
     }
+
+    // Everyone aboard: mod seats plus anyone sitting on a bench spot.
+    public int Riders => Occupants.Count(o => o != 0) + (Benches?.RiderCount ?? 0);
 
     public Vector3 Velocity => IsProxy ? lastVelocity : Body.linearVelocity;
 

@@ -25,6 +25,11 @@
     <Reference Include="$(InteropDir)\*.dll" Private="false" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Exported from model/mh6.blend by model/export_mh6.py. -->
+    <EmbeddedResource Include="Resources\mh6.bin" LogicalName="BigChoppa.mh6.bin" />
+  </ItemGroup>
+
   <Target Name="CopyPluginToGame" AfterTargets="Build"
           Condition="'$(GamePluginDir)' != ''">
     <MakeDir Directories="$(GamePluginDir)" />

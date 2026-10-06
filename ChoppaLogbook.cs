@@ -23,14 +23,17 @@ internal static class ChoppaLogbook
 
     static bool On => ChoppaConfig.LogbookEnabled.Value;
 
-    public static void Spawned() => Log("choppa_spawned", null);
+    public static void Spawned(Vehicle vehicle) => Log("choppa_spawned", new() { ["vehicle"] = Vehicles.Id(vehicle) });
 
-    public static void Boarded(bool pilot) => Log("choppa_boarded", new() { ["seat"] = pilot ? "pilot" : "passenger" });
+    // seat: "pilot", "passenger" (a mod seat: the classic's bench or the Little Bird's co-pilot) or "bench"
+    // (the Little Bird's outside benches, which are the game's own seats).
+    public static void Boarded(string seat) => Log("choppa_boarded", new() { ["seat"] = seat });
 
     public struct Flight
     {
         public float Seconds, Distance, MaxAltitude, TopSpeedKmh, EndSpeedKmh, UpsideDownSeconds, CockpitPercent;
         public string How; // "landed", "bailed" (pilot hopped out mid-air) or "ended abruptly"
+        public string Vehicle; // Vehicles.Id
         public int Riders, MaxRiders, Rolls, Loops, PocketItems;
     }
 
@@ -43,6 +46,7 @@ internal static class ChoppaLogbook
             ["top_speed_kmh"] = Mathf.Round(f.TopSpeedKmh),
             ["end_speed_kmh"] = Mathf.Round(f.EndSpeedKmh),
             ["how"] = f.How,
+            ["vehicle"] = f.Vehicle,
             ["riders"] = f.Riders,
             ["max_riders"] = f.MaxRiders,
             ["pocket_items"] = f.PocketItems,
@@ -72,11 +76,11 @@ internal static class ChoppaLogbook
 
     public static void FlippedUpright(bool seated) => Log("flipped_upright", new() { ["from"] = seated ? "inside" : "outside" });
 
-    // Anyone (pilot or passenger) leaving while the choppa is off the ground.
-    public static void JumpedOut(bool pilot, float height, float speedKmh) =>
+    // Anyone leaving while the choppa is off the ground. seat as in Boarded.
+    public static void JumpedOut(string seat, float height, float speedKmh) =>
         Log("jumped_out", new()
         {
-            ["seat"] = pilot ? "pilot" : "passenger",
+            ["seat"] = seat,
             ["height_m"] = Mathf.Round(height),
             ["speed_kmh"] = Mathf.Round(speedKmh),
         });

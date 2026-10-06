@@ -11,11 +11,14 @@
 
 A goofy, playground-style toy helicopter for Big Walk, flown with collective, pedals and cyclic.
 
-It has three seats, the pilot plus a two-person bench, and everyone in the lobby sees the same choppas.
+The choppa is a toy Little Bird: pilot and co-pilot up front (press G to get in), plus two spots on each outside
+bench that work like the chairlift seats: aim at one and use it to sit, choppa running or not.
+Miss the original spring-rider choppa (pilot plus a two-person bench)? Pick Classic in the F8 chooser.
+Everyone in the lobby sees the same choppas, whichever ones people picked.
 
 **Everyone in the lobby needs the mod, including the host.**
 
-Each side of the choppa has three pockets that take anything a backpack takes. Hold an item, look at a pocket and place it like you would in a backpack. Grab it again to take it out.
+Each side of the choppa has three pockets (on the Little Bird they hang off the tail boom) that take anything a backpack takes. Hold an item, look at a pocket and place it like you would in a backpack. Grab it again to take it out.
 
 Pocketed items count as held: if you quit with something in a pocket, you'll find it in the lost & found next time.
 
@@ -23,7 +26,7 @@ Pocketed items count as held: if you quit with something in a pocket, you'll fin
 
 | Key | Action |
 | --- | --- |
-| F8 | Call in a choppa: it flies in and lands near you (replaces your old one if it's empty) |
+| F8 | Choose a choppa, then Call In (it flies in and lands near you) or Spawn (it appears in front of you). Replaces your old one if it's empty |
 | G | Get in / get out. Takes the pilot seat if it's free, otherwise a passenger seat |
 | W / S | Collective up / down. Springs back to hover when released, or to idle on the ground |
 | A / D | Pedals: turn left / right |
@@ -45,6 +48,7 @@ Pocketed items count as held: if you quit with something in a pocket, you'll fin
 Every key and tuning value is in `BepInEx/config/com.andrew1431.bigchoppa.cfg`. With r2modman or Gale you can edit it from the mod manager's config editor. The file appears after you've launched the game once with the mod.
 
 Highlights:
+- Choppa: `Scale`
 - Controls: `MouseSensitivity`, `FreelookMouseSensitivity`, `InvertPitch`, `InvertRoll`, every key
 - Flight: `AutoLevel`, `ControlResponse`, `YawRate`, `MaxLiftG`, drag values
 - Lights: `HeadlightIntensity`, `HeadlightRange`, `HeadlightAngle`, `CabinGlow`
@@ -61,24 +65,25 @@ If the host doesn't have the mod, you may be kicked when you join. Set `Networki
 The choppa keeps a tiny logbook and sends it to me, the author, purely because I'm curious how people fly it. It's sent through PostHog, an analytics service. It's anonymous and there's nothing personal in it.
 
 **What gets logged:**
-- You spawned a choppa
-- You got in, and whether as the pilot or a passenger
+- You spawned a choppa, and which one (Little Bird or classic)
+- You got in, and whether as the pilot, a passenger or on an outside bench
 - A flight ended (logged by the pilot), with:
   - how long it lasted
   - how far it went
   - the highest it got
   - its top speed
   - its speed at the very end
-  - how many people were aboard at the end, and the most aboard at once
+  - how many people were aboard at the end, and the most aboard at once (bench riders included)
   - how many items were in the choppa pockets at the end
   - how many barrel rolls and loops you pulled off
   - how many seconds you spent upside down
   - how much of the flight was in cockpit view versus chase view
   - how it ended: *landed*, *bailed* (pilot hopped out mid-air) or *ended abruptly*
+  - which choppa it was (Little Bird or classic)
 - A choppa's flight ended abruptly (logged by whichever game was flying it, even with nobody at the controls): how fast it was going, how many people were aboard, whether anyone was piloting, and how many items were in its pockets
 - Something was put into or taken out of a choppa pocket, and what the item was (the game's own name for it). Logged by the host, so each one counts once per lobby
 - A passenger's ride ended: how long it lasted and how it ended (*got out*, *jumped out* or *ended abruptly*)
-- Someone jumped out mid-air: pilot or passenger, how high it was, and how fast it was going
+- Someone jumped out mid-air: pilot, passenger or bench rider, how high it was, and how fast it was going
 - Someone used the flip-upright key, and whether they were inside the choppa or outside it
 
 Each entry also carries the mod version and a random ID made up on your PC, so one person's flights can be told apart from another's.

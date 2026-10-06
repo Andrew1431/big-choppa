@@ -3,7 +3,7 @@
 import { renderCard } from './card.js';
 
 const CACHE_SECONDS = 600;
-const CACHE_KEY = 'https://big-choppa-stats.internal/stats/v3';
+const CACHE_KEY = 'https://big-choppa-stats.internal/stats/v4';
 
 // Most people aboard at once; older versions only logged the count at the end.
 const riders = `toInt(coalesce(properties.max_riders, properties.riders))`;
@@ -38,6 +38,14 @@ FROM events
 WHERE event = 'flight_ended' AND timestamp >= now() - INTERVAL 8 DAY
 GROUP BY day`;
 
+// Choppas called in, per model. Before 3.0.0 there was only the classic and spawns didn't say which.
+const VEHICLE_QUERY = `
+SELECT ifNull(nullIf(toString(properties.vehicle), ''), 'classic') AS vehicle, count() AS spawns
+FROM events
+WHERE event = 'choppa_spawned'
+GROUP BY vehicle
+ORDER BY spawns DESC`;
+
 async function runQuery(env, query) {
   const res = await fetch(`${env.POSTHOG_HOST}/api/projects/${env.POSTHOG_PROJECT_ID}/query/`, {
     method: 'POST',
@@ -60,11 +68,12 @@ function lastSevenDays(results, now = new Date()) {
 
 async function queryPostHog(env) {
   if (!env.POSTHOG_PERSONAL_KEY) throw new Error('POSTHOG_PERSONAL_KEY secret is not set');
-  const [totals, daily] = await Promise.all([runQuery(env, QUERY), runQuery(env, DAILY_QUERY)]);
+  const [totals, daily, vehicles] = await Promise.all([runQuery(env, QUERY), runQuery(env, DAILY_QUERY), runQuery(env, VEHICLE_QUERY)]);
   const row = totals.results?.[0] ?? [];
   return {
     ...Object.fromEntries(totals.columns.map((c, i) => [c, Number(row[i]) || 0])),
     daily: lastSevenDays(daily.results),
+    vehicles: (vehicles.results ?? []).map(([id, n]) => ({ id: String(id), spawns: Number(n) || 0 })),
   };
 }
 

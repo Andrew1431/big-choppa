@@ -7,7 +7,7 @@ namespace BigChoppa;
 // cloning one of the game's own materials, which is guaranteed to be compatible with its pipeline.
 internal static class ChoppaMaterials
 {
-    static readonly Dictionary<Color, Material> cache = new(), glowCache = new();
+    static readonly Dictionary<Color, Material> cache = new(), glowCache = new(), clearCache = new();
     static Shader shader;
     static Material template;
     static bool resolved;
@@ -33,6 +33,33 @@ internal static class ChoppaMaterials
         return mat;
     }
 
+    // See-through (glass). Switches URP/Lit to its transparent surface type the way the material inspector would.
+    // If the game's build stripped the transparent shader variant this still renders, just opaque.
+    public static Material GetTransparent(Color color)
+    {
+        if (clearCache.TryGetValue(color, out var existing) && existing != null) return existing;
+        var opaque = Get(color);
+        if (opaque == null) return null;
+        // ColorUtility.ToHtmlStringRGBA is stripped from the game build (Get gets away with the RGB one).
+        var mat = new Material(opaque) { name = $"BigChoppa_Clear_{ColorUtility.ToHtmlStringRGB(color)}_{Mathf.RoundToInt(color.a * 255f)}" };
+        mat.SetFloat("_Surface", 1f);
+        mat.SetFloat("_Blend", 0f);
+        mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+        mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+        mat.SetFloat("_SrcBlendAlpha", (float)UnityEngine.Rendering.BlendMode.One);
+        mat.SetFloat("_DstBlendAlpha", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+        mat.SetFloat("_ZWrite", 0f);
+        mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        mat.DisableKeyword("_ALPHATEST_ON");
+        // Nice-to-haves; any of these may be stripped from the game build too.
+        try { mat.SetOverrideTag("RenderType", "Transparent"); } catch (System.Exception e) { Plugin.Verbose($"Glass RenderType tag: {e.Message}"); }
+        try { mat.SetShaderPassEnabled("DepthOnly", false); mat.SetShaderPassEnabled("ShadowCaster", false); }
+        catch (System.Exception e) { Plugin.Verbose($"Glass shader passes: {e.Message}"); }
+        mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+        clearCache[color] = mat;
+        return mat;
+    }
+
     // Lamp lenses: unlit so they read as glowing at night. Falls back to an emissive lit material.
     public static Material GetGlow(Color color)
     {
@@ -54,6 +81,35 @@ internal static class ChoppaMaterials
         }
         mat.name = $"BigChoppa_Glow_{ColorUtility.ToHtmlStringRGB(color)}";
         glowCache[color] = mat;
+        return mat;
+    }
+
+    // Exactly this colour, no lighting (chooser previews bake their own). Alpha < 1 makes it see-through.
+    static readonly Dictionary<Color, Material> flatCache = new();
+    public static Material GetFlat(Color color)
+    {
+        if (flatCache.TryGetValue(color, out var existing) && existing != null) return existing;
+        var unlit = Shader.Find("Universal Render Pipeline/Unlit");
+        Material mat;
+        if (unlit == null) mat = color.a < 0.99f ? GetTransparent(color) : Get(color);
+        else
+        {
+            mat = new Material(unlit) { name = $"BigChoppa_Flat_{ColorUtility.ToHtmlStringRGB(color)}_{Mathf.RoundToInt(color.a * 255f)}" };
+            mat.SetColor("_BaseColor", color);
+            if (color.a < 0.99f)
+            {
+                mat.SetFloat("_Surface", 1f);
+                mat.SetFloat("_Blend", 0f);
+                mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                mat.SetFloat("_SrcBlendAlpha", (float)UnityEngine.Rendering.BlendMode.One);
+                mat.SetFloat("_DstBlendAlpha", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                mat.SetFloat("_ZWrite", 0f);
+                mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            }
+        }
+        if (mat != null) flatCache[color] = mat;
         return mat;
     }
 

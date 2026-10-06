@@ -88,8 +88,8 @@ internal static class HeliModel
             Anchor(model, "BenchLeftAnchor", new(-0.45f, sy, -0.75f + sz)),
             Anchor(model, "BenchRightAnchor", new(0.45f, sy, -0.75f + sz)),
         };
-        heli.Lights = ChoppaLights.Build(model, heli.Id);
-        heli.Pockets = ChoppaPockets.Build(model, heli);
+        heli.Lights = ChoppaLights.Build(model, heli.Id, scale, ChoppaLights.Classic());
+        heli.Pockets = ChoppaPockets.Build(model, heli, ChoppaPockets.BuildClassicPouches(model));
 
         heli.Exits = new[]
         {

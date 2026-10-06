@@ -1,7 +1,7 @@
 # Big Choppa: notes for Claude
 
 BepInEx 6 IL2CPP mod for **Big Walk** (Steam, Unity 6, URP, Mirror networking). Adds a goofy primitive-built toy
-helicopter with "real" controls (collective, pedals, mouse cyclic), 3 seats, multiplayer sync, synthesised audio,
+helicopter with "real" controls (collective, pedals, mouse cyclic), 2 mod seats + 4 bench spots (Little Bird) or 3 seats (classic), multiplayer sync, synthesised audio,
 and a break-apart crash. Published on Thunderstore as `BigChoppa` (community `big-walk`).
 
 `README.md` covers controls/config for devs; `thunderstore/README.md` is the player-facing page. Machine-specific
@@ -25,9 +25,10 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
   (gitignored). A push fails with a warning if the game is running on that machine (DLL locked) or the PC is offline.
 - `.\build.ps1 -InstallBepInEx` also copies the BepInEx loader + interop to the remote targets (first-time setup, or
   after a game update regenerates interop).
-- **Second-PC pushes are on hold.** Olga's install (mod + BepInEx) was removed again on 2026-10-05 after the 2.0.0
-  test. Her line in `remote-targets.txt` is commented out. To resume: uncomment it, close her game, run
-  `.uild.ps1 -InstallBepInEx`; she then launches from Steam (not r2modman) to get the dev build.
+- **Second-PC pushes are active again (2026-10-05, 3.0.0 networking tests).** Olga's line in `remote-targets.txt` is
+  uncommented and BepInEx + the dev build are back in her game folder; every `.uild.ps1` pushes to her (close her
+  game first). She launches from Steam (not r2modman) to get the dev build. To pause again: comment the line out and
+  remove BepInEx from her folder (see `DEV-NOTES.local.md`).
 - Default game path: `E:\SteamLibrary\steamapps\common\Big Walk` (`-GameDirectory` to override).
 - BepInEx location: the game folder's `BepInEx` if present, else the r2modman profile named **Dev**
   (`%APPDATA%\r2modmanPlus-local\BigWalk\profiles\Dev\BepInEx`); `-BepInExDirectory` overrides. The **Default**
@@ -73,7 +74,7 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
 - **Always load-test in the Dev profile before packaging.** A config section named "Pilot's Logbook" once broke
   loading entirely: BepInEx section/key names can't contain `= \n \t \ " ' [ ]`.
 - Published so far: 1.0.0 (no logbook). 1.0.1 adds the Pilot Logbook. 1.0.2 (README stats card only, no code change) is packaged once the card is live. 1.0.3 adds night lights, live config reload and the CenterOfMassHeight migration. 1.1.0 adds choppa pockets. 1.1.1 adds pocket/crew logbook analytics (no gameplay change). 1.1.2 fixes bonk sounds (Collision getters are stripped) and makes dev builds log instead of send logbook events. 1.1.3 adds FreelookMouseSensitivity. 1.2.0 adds the fly-in (F8 calls the choppa in on autopilot; `[Controls] FlyIn`). 1.2.1 shrinks the default Scale to 0.6 (migrated) and shows your head/body in the chase camera. 2.0.0 (major because protocol 2 breaks mixed lobbies) smooths proxy playback: owner stamps snapshots with its physics time, receivers replay on a
-  local clock with a min-tracked offset, Hermite interpolation, posed per frame in `Update` (protocol 2). 1.1.4 makes pockets inventory homes (`isInventory = true`) so pocketed items save to the lost & found (an earlier assumption that they couldn't was never tested).
+  local clock with a min-tracked offset, Hermite interpolation, posed per frame in `Update` (protocol 2). 3.0.0 adds the Little Bird (MH-6 model, bench spots as game seats), the F8 chooser with turntable previews, removes `[Model] Vehicle`/`[Controls] FlyIn`, and migrates `[Audio] Volume` 0.8 → 0.4 (protocol 3). 1.1.4 makes pockets inventory homes (`isInventory = true`) so pocketed items save to the lost & found (an earlier assumption that they couldn't was never tested).
 - Bump `ChoppaNet.Protocol` whenever the wire format changes; mismatched peers are ignored by the host.
 
 ## Code map
@@ -85,20 +86,38 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
 - `Helicopter.cs`: flight model (owner) or snapshot-interpolated kinematic proxy (everyone else).
 - `ChoppaNet.cs` / `ChoppaServer.cs`: networking (see below).
 - `ChoppaAutopilot.cs`: flies a newly called choppa in using only pilot inputs (collective, rates); `ChoppaManager.FindLandingSpot` picks a flat, clear spot with open sky or refuses the spawn.
-- `HeliModel.cs`: primitives; seat/exit anchors. `ChoppaCrash.cs`: seeded break-apart.
+- `Vehicles.cs`: `Vehicle` enum (Classic / LittleBird; wire value in the Spawn message, never reorder), per-vehicle
+  seat count and scale (`[Model] Scale` × 1/0.6 for the Little Bird, which is modelled at real size), and
+  `LittleBirdModel`, which builds the MH-6 from the embedded `Resources/mh6.bin` using its named empties.
+  `Vehicles.Catalog` lists what the F8 chooser (`ChoppaMenu.cs`, IMGUI Rects, game menu mode while open) offers,
+  each with Call In / Spawn and a number key; adding a vehicle there gives it a card. `ChoppaUi.cs` makes the
+  menu's shapes (SDF rounded-rect 9-slice textures, shadows, gradients) and Windows fonts (Bahnschrift, Segoe UI,
+  Cascadia Mono/Consolas, falling back to Unity's). `ChoppaPreview.cs` renders each card's turntable: the vehicle
+  is built on an inactive dummy, flattened into one mesh with lighting baked into URP/Unlit colours, and drawn by
+  a private camera at y=30000 into a RenderTexture (independent of the scene's lights and time of day). Each choppa is built as its spawner chose, so
+  mixed lobbies work. (`[Model] Vehicle` and `[Controls] FlyIn` were removed in 3.0.0.)
+- `MeshModel.cs`: reads `mh6.bin` and instantiates nodes/meshes. Source is `model/mh6.blend`; re-export after any
+  model change with `model/export_mh6.py` (Blender: `blender --background model/mh6.blend --python
+  model/export_mh6.py`, or run it in an open Blender). Conventions and empties: `model/PLAN-3.0.0.md`.
+- `HeliModel.cs`: the classic choppa from primitives; seat/exit anchors. `ChoppaCrash.cs`: seeded break-apart
+  (Little Bird debris uses convex MeshColliders).
 - `ChoppaLights.cs`: lamp lenses (unlit, swapped on/off) plus three real lights per choppa: headlight spot, cabin
   glow (always on), flashing roof beacon. Powered = `EngineOn || RotorSpin > 0.1` so proxies light up too.
+- `ChoppaBenches.cs`: the Little Bird's 4 outside bench spots are game `PlayerPose`s (what chairlift/train seats are),
+  copied from a game seat, with a `CastableTarget`; the game does entering, leaving and sync (by ticket, like pockets).
+  Not mod seats: `Occupants` only covers pilot/co-pilot; `Helicopter.Riders` adds bench riders for the logbook.
+  Each choppa owns tickets `60000 + (id % 553) * 10 + n` (0-5 pockets, 6-9 bench spots).
 - `ChoppaPockets.cs`: 6 side pockets. Each is a game `PropHome` (`pinGroup` copied from a backpack pocket, normally
   `GoesInBackpack`) plus a `CastableTarget` so the game's own crosshair place/pick-up and Mirror sync do the work.
   Homes are addressed over the network by ticket (`SeaShell.ShellReference(ticket)` → `TicketOffice`); ours are
-  `60000 + (id % 900) * 6 + slot`, so spawns pick an id with a free slot. Items must be released
+  tickets (numbering above), so spawns pick an id with a free slot. Items must be released
   (`ReleaseAll`: host `ServerSetUnpinned`, clients `LocalUnpin`) before a choppa is destroyed or they'd be destroyed
   with it. Homes have `isInventory = true`, so pocketed items count as held and the game saves them to the lost & found.
 - `ChoppaAudio.cs` / `ChoppaBonker.cs`: procedural audio and collision bonks.
 - `ChoppaLogbook.cs`: "Pilot's Logbook" anonymous usage events sent to PostHog (US region, `/batch/`; the project key is
-  write-only and public by design). Dev builds (`DEVBUILD`) never send: they log each event to `LogOutput.log` as `Logbook (dev, not sent): …` instead. On by default, opt-out via `[Pilot Logbook] Enabled`. Events: `choppa_spawned`,
-  `choppa_boarded {seat}`, `flight_ended {duration_s, distance_m, max_altitude_m, top_speed_kmh, end_speed_kmh, how: landed|bailed|ended
-  abruptly, riders, max_riders, pocket_items, rolls, loops, upside_down_s, cockpit_view_pct}` (pilot only), `ride_ended {duration_s, how: got
+  write-only and public by design). Dev builds (`DEVBUILD`) never send: they log each event to `LogOutput.log` as `Logbook (dev, not sent): …` instead. On by default, opt-out via `[Pilot Logbook] Enabled`. Events: `choppa_spawned {vehicle}`,
+  `choppa_boarded {seat: pilot|passenger|bench}`, `flight_ended {duration_s, distance_m, max_altitude_m, top_speed_kmh, end_speed_kmh, how: landed|bailed|ended
+  abruptly, riders, max_riders, pocket_items, rolls, loops, vehicle, upside_down_s, cockpit_view_pct}` (pilot only), `ride_ended {duration_s, how: got
   out|jumped out|ended abruptly}` (passengers), `jumped_out {seat, height_m, speed_kmh}` (anyone leaving > 1.5 m up),
   `flipped_upright {from: inside|outside}` (F9), `choppa_ended_abruptly {impact_kmh, riders, piloted, pocket_items}` (the crash, sent by the simulating owner, so it covers unpiloted crashes too), `pocket_used {action: stowed|taken, item}` (host only, so each is counted once per lobby). The owner deliberately does NOT want game-launch or session-size events. **Any new event or property must
   be added to the list in `thunderstore/README.md`**; full transparency was a condition. Never send names or Steam IDs.
@@ -107,7 +126,7 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
   live stats card at the top of both READMEs) and `/stats.json`, from a HogQL query against PostHog project 643292,
   cached 10 min. The PostHog personal API key (read-only query scope) is the Worker secret `POSTHOG_PERSONAL_KEY`;
   it must never go in the repo or chat. `node preview.js` renders the card with fake numbers; `npx wrangler deploy`
-  ships it (needs `npx wrangler login` first). New logbook stats on the card need both the query and `card.js` updated. `npx wrangler versions upload` gives a preview URL to check a query change against real data before `deploy`.
+  ships it (needs `npx wrangler login` first). New logbook stats on the card need both the query and `card.js` updated. The card's "choppas called in, by model" bars grow a row per vehicle id; give a new vehicle a name and colour in `card.js` `VEHICLES` (otherwise it's title-cased in a stripe colour). `npx wrangler versions upload` gives a preview URL to check a query change against real data before `deploy`.
 - `DevAutoHost.cs`: dev-build-only menu skipper (see Build, deploy, test).
 - `DevTime.cs`: dev-build-only `,` / `.` = time of day -/+ 1 h via Enviro (`EnviroManager.Time.SetTimeOfDay`); falls
   back to `SkyManager.SetFixedTime` if the game snaps it back.

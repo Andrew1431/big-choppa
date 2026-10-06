@@ -1,6 +1,6 @@
 // Renders the "Pilot's Logbook" flight-board card. Pure function so preview.js can render it offline.
 
-const W = 800, H = 580;
+const W = 800;
 const ink = '#1d2b53', soft = '#5a6b8c';
 const stripes = ['#ff5a5f', '#ffb000', '#2bb673', '#3a86ff'];
 
@@ -80,7 +80,7 @@ function chart(daily, error) {
 }
 
 // Share of flights by how many were aboard (most at once), as a donut with a labelled legend.
-const CREW = [['solo', '#3a86ff'], ['2 aboard', '#e08a00'], ['3 aboard', '#2bb673']];
+const CREW = [['solo', '#3a86ff'], ['2 aboard', '#e08a00'], ['3+ aboard', '#2bb673']];
 function arc(cx, cy, r0, r1, a0, a1) {
   const p = (r, a) => `${(cx + r * Math.sin(a)).toFixed(2)} ${(cy - r * Math.cos(a)).toFixed(2)}`;
   const big = a1 - a0 > Math.PI ? 1 : 0;
@@ -122,6 +122,46 @@ function crewPie(counts, error) {
   </g>`;
 }
 
+// Choppas called in per model: one glossy horizontal bar each, so the panel (and the card) grows a row per
+// vehicle. Ids are Vehicles.Id in the mod; a model missing here still shows up, title-cased, in a stripe colour.
+const VEHICLES = { little_bird: ['Little Bird', '#ffb000'], classic: ['Classic', '#ff5a5f'] };
+const VEH_Y = PANEL_Y + 184 + 16, VEH_ROW = 36, VEH_HEAD = 44;
+const vehiclePanelHeight = n => VEH_HEAD + Math.max(1, n) * VEH_ROW + 10;
+function vehicleName(id) {
+  return VEHICLES[id]?.[0] ?? id.split(/[_\s]+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+}
+function vehicleBars(vehicles, error) {
+  const x0 = 24, w = W - 48;
+  const list = error || !Array.isArray(vehicles) ? [] : vehicles.filter(v => v.spawns > 0);
+  const h = vehiclePanelHeight(list.length);
+  const total = list.reduce((a, v) => a + v.spawns, 0);
+  const max = Math.max(1, ...list.map(v => v.spawns));
+  const labelW = 130, valueW = 120, barX = 14 + labelW, barMax = w - barX - valueW - 14, barH = 22;
+  const rows = list.length ? list.map((v, i) => {
+    const y = VEH_HEAD + i * VEH_ROW;
+    const color = VEHICLES[v.id]?.[1] ?? stripes[(i + 2) % 4];
+    const bw = Math.max(barH, (v.spawns / max) * barMax);
+    const shine = bw > 40 ? `<rect x="${barX + 8}" y="${y + 5}" width="${bw - 16}" height="6" rx="3" fill="#fff" opacity="0.35"/>` : '';
+    const pct = `${Math.round((v.spawns / total) * 100)}%`;
+    return `
+    <text x="14" y="${y + 16}" font-size="14" font-weight="700" fill="${ink}">${esc(vehicleName(v.id))}</text>
+    <rect x="${barX}" y="${y}" width="${barMax}" height="${barH}" rx="${barH / 2}" fill="#eef3f9"/>
+    <rect x="${barX}" y="${y}" width="${bw}" height="${barH}" rx="${barH / 2}" fill="${color}"/>${shine}
+    <text x="${w - 14 - 48}" y="${y + 16}" text-anchor="end" font-size="15" font-weight="800" fill="${ink}">${num(v.spawns)}</text>
+    <text x="${w - 14}" y="${y + 16}" text-anchor="end" font-size="13" font-weight="700" fill="${soft}">${pct}</text>`;
+  }).join('') : `<text x="${w / 2}" y="${VEH_HEAD + 18}" text-anchor="middle" font-size="22" font-weight="800" fill="${ink}">—</text>`;
+  return {
+    h,
+    svg: `
+  <g transform="translate(${x0} ${VEH_Y})">
+    <rect width="${w}" height="${h}" rx="12" fill="#fff"/>
+    <rect width="${w}" height="6" rx="3" fill="${stripes[0]}"/>
+    <text x="14" y="30" font-size="13" font-weight="700" fill="${soft}">choppas called in, by model</text>
+    ${rows}
+  </g>`,
+  };
+}
+
 export function renderCard(stats, { updated = new Date(), error = false } = {}) {
   const s = stats ?? {};
   const v = (f, n) => (error || n == null ? '—' : f(n));
@@ -139,6 +179,8 @@ export function renderCard(stats, { updated = new Date(), error = false } = {}) 
     [v(n => `${num(n)} km/h`, s.top_speed_kmh), 'top speed'],
     [v(duration, s.upside_down_s), 'spent upside down'],
   ];
+  const vehicles = vehicleBars(s.vehicles, error);
+  const H = VEH_Y + vehicles.h + 40;
   const hhmm = updated.toISOString().slice(11, 16);
   const footer = error
     ? "The logbook is napping. Back soon."
@@ -161,6 +203,7 @@ export function renderCard(stats, { updated = new Date(), error = false } = {}) 
   ${tiles.map(([val, label], i) => tile(i, val, label)).join('')}
   ${chart(s.daily, error)}
   ${crewPie([s.solo_flights, s.duo_flights, s.trio_flights].map(n => Number(n) || 0), error)}
+  ${vehicles.svg}
   <text x="24" y="${H - 18}" font-size="13" font-weight="600" fill="${ink}" opacity="0.7">${esc(footer)}</text>
 </svg>`;
 }
