@@ -10,7 +10,7 @@ public sealed class Plugin : BasePlugin
 {
     public const string PluginGuid = "com.andrew1431.bigchoppa";
     public const string PluginName = "Big Choppa";
-    public const string PluginVersion = "1.3.0";
+    public const string PluginVersion = "2.0.0";
 
     internal static ManualLogSource L;
 

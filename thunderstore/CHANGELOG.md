@@ -1,9 +1,11 @@
 # Changelog
 
-## 1.3.0
+## 2.0.0
 
 - Much smoother ride as a passenger (or watching someone else fly), especially at speed and in turns.
-- Everyone in the lobby needs 1.3.0; older versions won't see your choppas.
+  You folks can definitely report these issues on [GitHub](https://github.com/Andrew1431/big-choppa/issues), I
+  didn't know this problem was occurring!
+- Everyone in the lobby needs 2.0.0 or newer; older versions won't see your choppas.
 
 ## 1.2.1
 
