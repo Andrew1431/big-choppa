@@ -98,6 +98,9 @@ public class ChoppaManager : MonoBehaviour
         PruneDead();
         if (Time.unscaledTime >= nextPlayerScan) ScanPlayers();
         TrackBench();
+#if DEVBUILD
+        DevMenuShot.Tick(menu);
+#endif
 
         if (menu.IsOpen)
         {
@@ -672,13 +675,13 @@ public class ChoppaManager : MonoBehaviour
     {
         string mode = ChoppaNet.Mode switch
         {
-            ChoppaNet.NetMode.Host => "HOSTING",
-            ChoppaNet.NetMode.Client => "ONLINE",
-            ChoppaNet.NetMode.Connecting => "CONNECTING",
-            _ => "SOLO",
+            ChoppaNet.NetMode.Host => "Hosting",
+            ChoppaNet.NetMode.Client => "Online",
+            ChoppaNet.NetMode.Connecting => "Connecting",
+            _ => "Solo",
         };
         int n = helis.Values.Count(h => h != null && !h.Broken);
-        return $"{mode}  ·  {n} CHOPPA{(n == 1 ? "" : "S")} OUT";
+        return $"{mode} · {n} choppa{(n == 1 ? "" : "s")} out";
     }
 
     static string FullMessage(Helicopter h) =>

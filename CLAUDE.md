@@ -74,7 +74,7 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
 - **Always load-test in the Dev profile before packaging.** A config section named "Pilot's Logbook" once broke
   loading entirely: BepInEx section/key names can't contain `= \n \t \ " ' [ ]`.
 - Published so far: 1.0.0 (no logbook). 1.0.1 adds the Pilot Logbook. 1.0.2 (README stats card only, no code change) is packaged once the card is live. 1.0.3 adds night lights, live config reload and the CenterOfMassHeight migration. 1.1.0 adds choppa pockets. 1.1.1 adds pocket/crew logbook analytics (no gameplay change). 1.1.2 fixes bonk sounds (Collision getters are stripped) and makes dev builds log instead of send logbook events. 1.1.3 adds FreelookMouseSensitivity. 1.2.0 adds the fly-in (F8 calls the choppa in on autopilot; `[Controls] FlyIn`). 1.2.1 shrinks the default Scale to 0.6 (migrated) and shows your head/body in the chase camera. 2.0.0 (major because protocol 2 breaks mixed lobbies) smooths proxy playback: owner stamps snapshots with its physics time, receivers replay on a
-  local clock with a min-tracked offset, Hermite interpolation, posed per frame in `Update` (protocol 2). 3.0.0 adds the Little Bird (MH-6 model, bench spots as game seats), the F8 chooser with turntable previews, removes `[Model] Vehicle`/`[Controls] FlyIn`, and migrates `[Audio] Volume` 0.8 → 0.4 (protocol 3). 1.1.4 makes pockets inventory homes (`isInventory = true`) so pocketed items save to the lost & found (an earlier assumption that they couldn't was never tested).
+  local clock with a min-tracked offset, Hermite interpolation, posed per frame in `Update` (protocol 2). 3.0.0 adds the Little Bird (MH-6 model, bench spots as game seats), the F8 chooser with turntable previews, removes `[Model] Vehicle`/`[Controls] FlyIn`, and migrates `[Audio] Volume` 0.8 → 0.4 (protocol 3). 3.0.1 restyles the F8 chooser (toy-box look, no protocol change). 1.1.4 makes pockets inventory homes (`isInventory = true`) so pocketed items save to the lost & found (an earlier assumption that they couldn't was never tested).
 - Bump `ChoppaNet.Protocol` whenever the wire format changes; mismatched peers are ignored by the host.
 
 ## Code map
@@ -90,9 +90,13 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
   seat count and scale (`[Model] Scale` × 1/0.6 for the Little Bird, which is modelled at real size), and
   `LittleBirdModel`, which builds the MH-6 from the embedded `Resources/mh6.bin` using its named empties.
   `Vehicles.Catalog` lists what the F8 chooser (`ChoppaMenu.cs`, IMGUI Rects, game menu mode while open) offers,
-  each with Call In / Spawn and a number key; adding a vehicle there gives it a card. `ChoppaUi.cs` makes the
-  menu's shapes (SDF rounded-rect 9-slice textures, shadows, gradients) and Windows fonts (Bahnschrift, Segoe UI,
-  Cascadia Mono/Consolas, falling back to Unity's). `ChoppaPreview.cs` renders each card's turntable: the vehicle
+  each with Call In / Spawn and a number key; adding a vehicle there gives it a card. The menu's look (since 3.0.1)
+  is "toy box" (Animal Crossing / Super Battle Golf): ink outlines with hard drop shadows, slowly panning dots and
+  stripes, tilted sticker cards that straighten under the mouse, chunky lipped buttons; the concept canvas is
+  https://claude.ai/artifact/168BfTrMymG6ZTCC7i1NEx (board B "Island"). `ChoppaUi.cs` makes the shapes (SDF
+  rounded-rect 9-slice textures, shadows, tiled dots/stripes, triangle, outlined text) and finds fonts: the display
+  face is the game's own loaded `Manrope-ExtraBold` (body `Manrope-Medium`), falling back to Windows fonts. A mod
+  can't load its own .ttf (IL2CPP strips `Font(string)`), and the game loads no rounded font. `ChoppaPreview.cs` renders each card's turntable: the vehicle
   is built on an inactive dummy, flattened into one mesh with lighting baked into URP/Unlit colours, and drawn by
   a private camera at y=30000 into a RenderTexture (independent of the scene's lights and time of day). Each choppa is built as its spawner chose, so
   mixed lobbies work. (`[Model] Vehicle` and `[Controls] FlyIn` were removed in 3.0.0.)
@@ -128,6 +132,10 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
   it must never go in the repo or chat. `node preview.js` renders the card with fake numbers; `npx wrangler deploy`
   ships it (needs `npx wrangler login` first). New logbook stats on the card need both the query and `card.js` updated. The card's "choppas called in, by model" bars grow a row per vehicle id; give a new vehicle a name and colour in `card.js` `VEHICLES` (otherwise it's title-cased in a stripe colour). `npx wrangler versions upload` gives a preview URL to check a query change against real data before `deploy`.
 - `DevAutoHost.cs`: dev-build-only menu skipper (see Build, deploy, test).
+- `DevMenuShot.cs`: dev-build-only unattended screenshot of the F8 menu. Write `BepInEx\config\bigchoppa-menushot.txt`
+  (line 1 output .png path, optional line 2 card index to draw hovered, optional line 3 `quit`), then launch with
+  `steam.exe -applaunch 1478500 --doorstop-enable true --doorstop-target-assembly <Dev>\BepInEx\core\BepInEx.Unity.IL2CPP.dll`;
+  AutoHost loads the world, the menu opens, the shot is taken and the game quits.
 - `DevTime.cs`: dev-build-only `,` / `.` = time of day -/+ 1 h via Enviro (`EnviroManager.Time.SetTimeOfDay`); falls
   back to `SkyManager.SetFixedTime` if the game snaps it back.
 - `ChoppaPhysics.cs`: collision-layer fix. `ChoppaInput.cs`: Rewired with Unity Input fallback.
@@ -151,6 +159,8 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
 - Known issue: the seated character looks like it's lying on its back. The `kernal` tilt theory was disproven (its
   localRotation is identity); next suspect is the sit pose itself (try `Model.SitWhileFlying = false`).
 - URP shader "Universal Render Pipeline/Lit" works for runtime materials (`_BaseColor`).
+- `GUI.DrawTextureWithTexCoords` hard-crashes the runtime (coreclr access violation, no managed exception) on the
+  first Repaint. Tile with a grid of `GUI.DrawTexture` inside `GUI.BeginGroup` (`ChoppaUi.Tile`).
 - Il2CppInterop: `byte[]` ↔ `Il2CppStructArray<byte>` convert implicitly; `AudioClip.SetData` needs an explicit
   `(Il2CppStructArray<float>)` cast (ambiguous with the Span overload). Managed → IL2CPP delegates via
   `DelegateSupport.ConvertDelegate<T>`; keep a reference so it isn't collected. Runtime AudioClips need
@@ -178,6 +188,10 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
 - v1 worked first try between two PCs (host + client), including passengers and crashes.
 
 ## TODO / known bugs
+
+- **Seated players keep their last animation** (e.g. walking on the spot) and a first-person arm floats in the chase
+  view, because seating freezes the player (`bypassUpdate`). Making the mod seats game `PlayerPose`s fixed it, but
+  broke sync, so it was rolled back (see `DEV-NOTES.local.md`). Next idea: drive the Animator into a sitting state directly.
 
 - **Late joiners don't see existing choppas.** A player who joins a lobby after choppas were spawned sees none of them
   until someone presses F8 (the new Spawn message makes them show up; unclear whether the others appear too). The

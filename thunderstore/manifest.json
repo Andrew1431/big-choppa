@@ -1,6 +1,6 @@
 {
   "name": "BigChoppa",
-  "version_number": "3.0.0",
+  "version_number": "3.0.1",
   "website_url": "https://github.com/Andrew1431/big-choppa",
   "description": "Goofy playground helicopters flown with collective, pedals and mouse cyclic: the new 6-seat Little Bird or the original Classic. Shared with everyone in the lobby. Everyone needs the mod.",
   "dependencies": [

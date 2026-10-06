@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.0.1
+
+- The F8 choppa chooser got a toy-box makeover: chunky outlined cards that perk up when you point at them, big
+  bouncy buttons and a little choppa to explain Call In and Spawn. Same choices, same keys.
+
 ## 3.0.0
 
 - Meet the Little Bird: a brand new toy MH-6 choppa with room for six, see-through windows and saddlebag pockets
