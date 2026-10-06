@@ -1,8 +1,8 @@
 {
   "name": "BigChoppa",
-  "version_number": "2.0.0",
+  "version_number": "3.0.0",
   "website_url": "https://github.com/Andrew1431/big-choppa",
-  "description": "A goofy playground helicopter flown with collective, pedals and mouse cyclic. Seats 3 and is shared with everyone in the lobby. Everyone needs the mod.",
+  "description": "Goofy playground helicopters flown with collective, pedals and mouse cyclic: the new 6-seat Little Bird or the original Classic. Shared with everyone in the lobby. Everyone needs the mod.",
   "dependencies": [
     "BepInEx-BepInExPack_IL2CPP-6.0.755"
   ]
