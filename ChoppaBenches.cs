@@ -69,6 +69,10 @@ internal sealed class ChoppaBenches
     {
         FindTemplate();
         var office = TicketOffice.instance;
+        // The seat empty marks the bench surface; the pose puts the rider's centre there, so slide each spot up and
+        // out (seat frame: +Y up, +Z outboard) by the radius of the rider's bottom.
+        float r = BottomRadius();
+        float s = heli.Scale > 0f ? heli.Scale : 1f;
         for (int i = 0; i < poses.Count; i++)
         {
             var pose = poses[i];
@@ -85,6 +89,7 @@ internal sealed class ChoppaBenches
                     continue;
                 }
                 var go = pose.gameObject;
+                go.transform.localPosition += go.transform.localRotation * new Vector3(0f, r, r) / s;
                 if (castLayer >= 0) go.layer = castLayer;
                 go.GetComponent<BoxCollider>().isTrigger = castTrigger;
 
@@ -108,6 +113,35 @@ internal sealed class ChoppaBenches
                 poses[i] = null;
             }
         }
+    }
+
+    // Measured once from a player's colliders: the round bottom is their biggest sphere/capsule.
+    static float bottomRadius = -1f;
+    static float BottomRadius()
+    {
+        if (bottomRadius > 0f) return bottomRadius;
+        const float fallback = 0.3f;
+        try
+        {
+            var pc = UnityEngine.Object.FindObjectOfType<PlayerCharacter>();
+            if (pc == null) return fallback;
+            float best = 0f;
+            foreach (var c in pc.GetComponentsInChildren<Collider>(true))
+            {
+                float scale = Mathf.Max(c.transform.lossyScale.x, c.transform.lossyScale.z);
+                var sc = c.TryCast<SphereCollider>();
+                var cc = c.TryCast<CapsuleCollider>();
+                float rad = sc != null ? sc.radius * scale : cc != null ? cc.radius * scale : 0f;
+#if DEVBUILD
+                if (rad > 0f) Plugin.L.LogInfo($"Bench spots (dev): player collider '{c.name}' radius {rad:0.000}.");
+#endif
+                best = Mathf.Max(best, rad);
+            }
+            bottomRadius = best > 0.1f && best < 0.6f ? best : fallback;
+            Plugin.L.LogInfo($"Bench spots: rider bottom radius {bottomRadius:0.00} m (measured {best:0.00}).");
+        }
+        catch (Exception e) { Plugin.L.LogWarning($"Bench spots: measuring the rider failed: {e.Message}"); return fallback; }
+        return bottomRadius;
     }
 
     static void CopyFrom(PlayerPose t, PlayerPose p)

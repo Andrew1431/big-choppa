@@ -105,7 +105,7 @@ public class ChoppaManager : MonoBehaviour
         if (inputAllowed && ChoppaInput.Pressed(ChoppaConfig.EnterExitKey.Value))
         {
             if (seated) Leave();
-            else TryBoard();
+            else if (!InGamePose()) TryBoard();
         }
 #if DEVBUILD
         // Local-only seat cycle for eyeballing seat anchors; the host still thinks we're in the original seat.
@@ -1029,6 +1029,13 @@ public class ChoppaManager : MonoBehaviour
     // The Little Bird's benches are game seats, so we notice the local player sitting on one rather than seating them.
     Helicopter benchHeli;
 
+    // Sitting on a bench spot (or any game seat): G mustn't also put you in a mod seat.
+    bool InGamePose()
+    {
+        try { return local != null && local.poser != null && local.poser.currentPose != null; }
+        catch { return false; }
+    }
+
     void TrackBench()
     {
         PlayerPose pose = null;
@@ -1145,7 +1152,7 @@ public class ChoppaManager : MonoBehaviour
             if (seated && seatHeli != null) DrawFlightHud();
             else if (local != null && Alive(local))
             {
-                var h = NearestBoardable(out _);
+                var h = InGamePose() ? null : NearestBoardable(out _);
                 if (h != null)
                 {
                     int seat = FreeSeat(h);
