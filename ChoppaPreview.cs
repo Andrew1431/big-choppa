@@ -14,7 +14,9 @@ internal sealed class ChoppaPreview
     // Default layer: the game's URP renderer may filter out unused high layers (31 drew nothing). The stage is 30 km
     // up, past every other camera's far plane, so nothing else ever sees it.
     const int Layer = 0;
-    static readonly Vector3 Stage = new(0f, 30000f, 0f);
+    // Each preview gets its own stage 1 km apart, or every camera would see every model.
+    static int stages;
+    readonly Vector3 Stage = new(1000f * stages++, 30000f, 0f);
     static readonly Vector3 ViewDir = new Vector3(0.95f, 0.42f, 0.85f).normalized; // front-right, from above
     static readonly Vector3 KeyLight = new Vector3(0.35f, 1f, 0.55f).normalized;
 
