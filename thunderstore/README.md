@@ -11,7 +11,8 @@
 
 A goofy, playground-style toy helicopter for Big Walk, flown with collective, pedals and cyclic.
 
-The choppa is a toy Little Bird: pilot and co-pilot up front, plus two riders on each outside bench, six in all.
+The choppa is a toy Little Bird: pilot and co-pilot up front (press G to get in), plus two spots on each outside
+bench that work like the chairlift seats: aim at one and use it to sit, choppa running or not.
 Miss the original spring-rider choppa (pilot plus a two-person bench)? Set `[Model] Vehicle = Classic` and that's
 the one you'll call in. Everyone in the lobby sees the same choppas, whichever ones people picked.
 
@@ -65,14 +66,14 @@ The choppa keeps a tiny logbook and sends it to me, the author, purely because I
 
 **What gets logged:**
 - You spawned a choppa, and which one (Little Bird or classic)
-- You got in, and whether as the pilot or a passenger
+- You got in, and whether as the pilot, a passenger or on an outside bench
 - A flight ended (logged by the pilot), with:
   - how long it lasted
   - how far it went
   - the highest it got
   - its top speed
   - its speed at the very end
-  - how many people were aboard at the end, and the most aboard at once
+  - how many people were aboard at the end, and the most aboard at once (bench riders included)
   - how many items were in the choppa pockets at the end
   - how many barrel rolls and loops you pulled off
   - how many seconds you spent upside down
@@ -82,7 +83,7 @@ The choppa keeps a tiny logbook and sends it to me, the author, purely because I
 - A choppa's flight ended abruptly (logged by whichever game was flying it, even with nobody at the controls): how fast it was going, how many people were aboard, whether anyone was piloting, and how many items were in its pockets
 - Something was put into or taken out of a choppa pocket, and what the item was (the game's own name for it). Logged by the host, so each one counts once per lobby
 - A passenger's ride ended: how long it lasted and how it ended (*got out*, *jumped out* or *ended abruptly*)
-- Someone jumped out mid-air: pilot or passenger, how high it was, and how fast it was going
+- Someone jumped out mid-air: pilot, passenger or bench rider, how high it was, and how fast it was going
 - Someone used the flip-upright key, and whether they were inside the choppa or outside it
 
 Each entry also carries the mod version and a random ID made up on your PC, so one person's flights can be told apart from another's.

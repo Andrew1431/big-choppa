@@ -95,6 +95,7 @@ public class ChoppaManager : MonoBehaviour
 
         PruneDead();
         if (Time.unscaledTime >= nextPlayerScan) ScanPlayers();
+        TrackBench();
 
         bool inputAllowed = !ChoppaConfig.RequireCursorLock.Value || Cursor.lockState == CursorLockMode.Locked;
 
@@ -394,12 +395,14 @@ public class ChoppaManager : MonoBehaviour
         ChoppaServer.Reset();
     }
 
-    // Pocketed items drop to the ground instead of vanishing with the choppa.
-    static void Discard(Helicopter h)
+    // Pocketed items drop to the ground and bench riders hop off instead of vanishing with the choppa.
+    void Discard(Helicopter h)
     {
         if (!Alive(h)) return;
         try { h.Pockets?.ReleaseAll(Vector3.zero); }
         catch (Exception e) { Plugin.L.LogError($"Emptying pockets: {e}"); }
+        try { h.Benches?.Release(local); }
+        catch (Exception e) { Plugin.L.LogError($"Clearing benches: {e}"); }
         Destroy(h.gameObject);
     }
 
@@ -705,7 +708,7 @@ public class ChoppaManager : MonoBehaviour
         seated = true;
         flightStart = -1f;
         rideStart = index == 0 ? -1f : Time.time;
-        ChoppaLogbook.Boarded(index == 0);
+        ChoppaLogbook.Boarded(index == 0 ? "pilot" : "passenger");
         if (index == 0 && !h.IsProxy)
         {
             h.EngineOn = true;
@@ -730,7 +733,7 @@ public class ChoppaManager : MonoBehaviour
             h.CommandedRates = Vector3.zero;
         }
         float height = Altitude(h);
-        if (height > 1.5f) ChoppaLogbook.JumpedOut(index == 0, height, vel.magnitude * 3.6f);
+        if (height > 1.5f) ChoppaLogbook.JumpedOut(index == 0 ? "pilot" : "passenger", height, vel.magnitude * 3.6f);
         if (index == 0) EndFlight(h, h.Grounded ? "landed" : "bailed", vel.magnitude * 3.6f);
         else EndRide(height > 1.5f ? "jumped out" : "got out");
         uint id = h.Id;
@@ -975,7 +978,7 @@ public class ChoppaManager : MonoBehaviour
             float dt = Time.deltaTime;
             if (Vector3.Dot(h.transform.up, Vector3.up) < 0f) flightUpsideDown += dt;
             if (camMode == CamMode.Cockpit) flightCockpitTime += dt;
-            flightMaxRiders = Mathf.Max(flightMaxRiders, h.Occupants.Count(o => o != 0));
+            flightMaxRiders = Mathf.Max(flightMaxRiders, h.Riders);
 
             // Integrate rotation about the choppa's own axes; a full 360 one way counts as a roll or loop.
             // Wobbling back and forth cancels out.
@@ -1003,7 +1006,7 @@ public class ChoppaManager : MonoBehaviour
         flightStart = -1f;
         groundedSince = -1f;
         if (duration < 1f) return;
-        int riders = h.Occupants.Count(o => o != 0);
+        int riders = h.Riders;
         ChoppaLogbook.FlightEnded(new ChoppaLogbook.Flight
         {
             Seconds = duration,
@@ -1023,6 +1026,34 @@ public class ChoppaManager : MonoBehaviour
         });
     }
 
+    // The Little Bird's benches are game seats, so we notice the local player sitting on one rather than seating them.
+    Helicopter benchHeli;
+
+    void TrackBench()
+    {
+        PlayerPose pose = null;
+        try { pose = local.poser?.currentPose; } catch { }
+        Helicopter on = null;
+        if (pose != null)
+            foreach (var h in helis.Values)
+                if (h != null && h.Benches != null && h.Benches.Owns(pose)) { on = h; break; }
+        if (on == benchHeli) return;
+
+        if (benchHeli != null && Alive(benchHeli))
+        {
+            float height = Altitude(benchHeli);
+            if (height > 1.5f) ChoppaLogbook.JumpedOut("bench", height, benchHeli.Velocity.magnitude * 3.6f);
+            EndRide(height > 1.5f ? "jumped out" : "got out");
+        }
+        benchHeli = on;
+        if (on != null)
+        {
+            rideStart = Time.time;
+            ChoppaLogbook.Boarded("bench");
+            Plugin.L.LogInfo("Sat on a choppa bench.");
+        }
+    }
+
     void EndRide(string how)
     {
         if (rideStart < 0f) return;
@@ -1039,7 +1070,7 @@ public class ChoppaManager : MonoBehaviour
         int seed = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
         uint id = crashed.Id;
         Vector3 impact = crashed.ImpactVelocity;
-        try { ChoppaLogbook.EndedAbruptly(impact.magnitude * 3.6f, crashed.Occupants.Count(o => o != 0), crashed.Occupants[0] != 0, crashed.Pockets?.ItemCount ?? 0); }
+        try { ChoppaLogbook.EndedAbruptly(impact.magnitude * 3.6f, crashed.Riders, crashed.Occupants[0] != 0, crashed.Pockets?.ItemCount ?? 0); }
         catch (Exception e) { Plugin.L.LogError($"Logbook: {e}"); }
         try { ChoppaNet.ToServer(ChoppaNet.Write(Msg.Crash, w => { w.Write(id); w.Write(impact); w.Write(seed); }), true); }
         catch (Exception e) { Plugin.L.LogError($"Sending crash: {e}"); }
@@ -1053,6 +1084,12 @@ public class ChoppaManager : MonoBehaviour
         try
         {
             Vector3 crashPos = h.transform.position;
+            if (benchHeli == h)
+            {
+                EndRide("ended abruptly");
+                benchHeli = null;
+            }
+            h.Benches?.Release(local); // a bench rider is then close enough to get the stun below
             if (seated && seatHeli == h)
             {
                 if (seatIndex == 0) EndFlight(h, "ended abruptly", impact.magnitude * 3.6f);

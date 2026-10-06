@@ -2,8 +2,9 @@
 
 ## 3.0.0
 
-- Meet the Little Bird: a brand new toy MH-6 choppa with room for six (pilot, co-pilot and two on each outside
-  bench), see-through windows and saddlebag pockets on the tail boom.
+- Meet the Little Bird: a brand new toy MH-6 choppa with room for six, see-through windows and saddlebag pockets
+  on the tail boom. Pilot and co-pilot get in with G; the four outside bench spots work like the chairlift seats
+  (aim and use), even when nobody's flying.
 - The original choppa is still here: set `[Model] Vehicle` (new, default `LittleBird`) to `Classic` to keep
   flying it. Each choppa is built the way its owner picked, so mixed lobbies work.
 - Everyone in the lobby needs 3.0.0 or newer; older versions won't see your choppas.

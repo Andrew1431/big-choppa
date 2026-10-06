@@ -1,7 +1,7 @@
 # Big Choppa: notes for Claude
 
 BepInEx 6 IL2CPP mod for **Big Walk** (Steam, Unity 6, URP, Mirror networking). Adds a goofy primitive-built toy
-helicopter with "real" controls (collective, pedals, mouse cyclic), 6 seats (Little Bird) or 3 (classic), multiplayer sync, synthesised audio,
+helicopter with "real" controls (collective, pedals, mouse cyclic), 2 mod seats + 4 bench spots (Little Bird) or 3 seats (classic), multiplayer sync, synthesised audio,
 and a break-apart crash. Published on Thunderstore as `BigChoppa` (community `big-walk`).
 
 `README.md` covers controls/config for devs; `thunderstore/README.md` is the player-facing page. Machine-specific
@@ -96,16 +96,20 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
   (Little Bird debris uses convex MeshColliders).
 - `ChoppaLights.cs`: lamp lenses (unlit, swapped on/off) plus three real lights per choppa: headlight spot, cabin
   glow (always on), flashing roof beacon. Powered = `EngineOn || RotorSpin > 0.1` so proxies light up too.
+- `ChoppaBenches.cs`: the Little Bird's 4 outside bench spots are game `PlayerPose`s (what chairlift/train seats are),
+  copied from a game seat, with a `CastableTarget`; the game does entering, leaving and sync (by ticket, like pockets).
+  Not mod seats: `Occupants` only covers pilot/co-pilot; `Helicopter.Riders` adds bench riders for the logbook.
+  Each choppa owns tickets `60000 + (id % 553) * 10 + n` (0-5 pockets, 6-9 bench spots).
 - `ChoppaPockets.cs`: 6 side pockets. Each is a game `PropHome` (`pinGroup` copied from a backpack pocket, normally
   `GoesInBackpack`) plus a `CastableTarget` so the game's own crosshair place/pick-up and Mirror sync do the work.
   Homes are addressed over the network by ticket (`SeaShell.ShellReference(ticket)` → `TicketOffice`); ours are
-  `60000 + (id % 900) * 6 + slot`, so spawns pick an id with a free slot. Items must be released
+  tickets (numbering above), so spawns pick an id with a free slot. Items must be released
   (`ReleaseAll`: host `ServerSetUnpinned`, clients `LocalUnpin`) before a choppa is destroyed or they'd be destroyed
   with it. Homes have `isInventory = true`, so pocketed items count as held and the game saves them to the lost & found.
 - `ChoppaAudio.cs` / `ChoppaBonker.cs`: procedural audio and collision bonks.
 - `ChoppaLogbook.cs`: "Pilot's Logbook" anonymous usage events sent to PostHog (US region, `/batch/`; the project key is
   write-only and public by design). Dev builds (`DEVBUILD`) never send: they log each event to `LogOutput.log` as `Logbook (dev, not sent): …` instead. On by default, opt-out via `[Pilot Logbook] Enabled`. Events: `choppa_spawned {vehicle}`,
-  `choppa_boarded {seat}`, `flight_ended {duration_s, distance_m, max_altitude_m, top_speed_kmh, end_speed_kmh, how: landed|bailed|ended
+  `choppa_boarded {seat: pilot|passenger|bench}`, `flight_ended {duration_s, distance_m, max_altitude_m, top_speed_kmh, end_speed_kmh, how: landed|bailed|ended
   abruptly, riders, max_riders, pocket_items, rolls, loops, vehicle, upside_down_s, cockpit_view_pct}` (pilot only), `ride_ended {duration_s, how: got
   out|jumped out|ended abruptly}` (passengers), `jumped_out {seat, height_m, speed_kmh}` (anyone leaving > 1.5 m up),
   `flipped_upright {from: inside|outside}` (F9), `choppa_ended_abruptly {impact_kmh, riders, piloted, pocket_items}` (the crash, sent by the simulating owner, so it covers unpiloted crashes too), `pocket_used {action: stowed|taken, item}` (host only, so each is counted once per lobby). The owner deliberately does NOT want game-launch or session-size events. **Any new event or property must

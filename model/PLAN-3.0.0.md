@@ -9,6 +9,9 @@ Major version: new seat layout (6 seats) and protocol bump, so mixed lobbies wit
   (`MeshModel.cs`), `Vehicle` refactor (`Vehicles.cs`; lights/pockets take per-vehicle layouts), `[Model] Vehicle`
   config (default LittleBird), vehicle in the Spawn message (protocol 3), per-choppa seat count, logbook `vehicle`
   property, transparent glass material, convex debris colliders, CHANGELOG/README.
+- Done: Little Bird benches are game seats (`ChoppaBenches`, PlayerPose copied from a chairlift/train seat);
+  mod seats are just pilot + co-pilot. Classic unchanged.
+- Next: in-game test of the bench spots (template choice, bum height/facing, sync, riding while flying, crash);
 - Next: in-game test (looks, winding/normals, glass, seats/exits, pockets, lights, colliders/landing, crash),
   then tuning. Later: F8 hold-to-pick UI. Release: version bump to 3.0.0, new icon/screenshots.
 

@@ -25,7 +25,9 @@ internal static class ChoppaLogbook
 
     public static void Spawned(Vehicle vehicle) => Log("choppa_spawned", new() { ["vehicle"] = Vehicles.Id(vehicle) });
 
-    public static void Boarded(bool pilot) => Log("choppa_boarded", new() { ["seat"] = pilot ? "pilot" : "passenger" });
+    // seat: "pilot", "passenger" (a mod seat: the classic's bench or the Little Bird's co-pilot) or "bench"
+    // (the Little Bird's outside benches, which are the game's own seats).
+    public static void Boarded(string seat) => Log("choppa_boarded", new() { ["seat"] = seat });
 
     public struct Flight
     {
@@ -74,11 +76,11 @@ internal static class ChoppaLogbook
 
     public static void FlippedUpright(bool seated) => Log("flipped_upright", new() { ["from"] = seated ? "inside" : "outside" });
 
-    // Anyone (pilot or passenger) leaving while the choppa is off the ground.
-    public static void JumpedOut(bool pilot, float height, float speedKmh) =>
+    // Anyone leaving while the choppa is off the ground. seat as in Boarded.
+    public static void JumpedOut(string seat, float height, float speedKmh) =>
         Log("jumped_out", new()
         {
-            ["seat"] = pilot ? "pilot" : "passenger",
+            ["seat"] = seat,
             ["height_m"] = Mathf.Round(height),
             ["speed_kmh"] = Mathf.Round(speedKmh),
         });

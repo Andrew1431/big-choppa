@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -27,6 +28,7 @@ public class Helicopter : MonoBehaviour
     public Vector3[] PupilRest;
     internal ChoppaLights Lights;
     internal ChoppaPockets Pockets;
+    internal ChoppaBenches Benches; // Little Bird only
 
     public bool EngineOn;
     public float Collective;   // 0..1
@@ -70,6 +72,7 @@ public class Helicopter : MonoBehaviour
         foreach (var t in root.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = layer;
         ChoppaPhysics.CollideWithEverything(root);
         heli.Pockets?.Activate();
+        heli.Benches?.Activate();
         ChoppaAudio.Attach(heli);
         ChoppaBonker.Add(root, 0.9f, 2.5f);
 
@@ -149,7 +152,7 @@ public class Helicopter : MonoBehaviour
         if (TailRotor != null) TailRotor.Rotate(RotorSpin * 1600f * dt, 0f, 0f, Space.Self);
         // Proxies don't know EngineOn, but their synced rotor spin says whether someone's flying.
         Lights?.Drive(EngineOn || RotorSpin > 0.1f);
-        if (!Broken) Pockets?.Tick();
+        if (!Broken) { Pockets?.Tick(); Benches?.Tick(); }
 
         // Googly eyes slosh against acceleration.
         if (Pupils != null)
@@ -348,6 +351,9 @@ public class Helicopter : MonoBehaviour
         RotorSpin = s.Spin;
         Collective = s.Collective;
     }
+
+    // Everyone aboard: mod seats plus anyone sitting on a bench spot.
+    public int Riders => Occupants.Count(o => o != 0) + (Benches?.RiderCount ?? 0);
 
     public Vector3 Velocity => IsProxy ? lastVelocity : Body.linearVelocity;
 

@@ -13,9 +13,10 @@ namespace BigChoppa;
 internal sealed class ChoppaPockets
 {
     public const int Count = 6;
-    const int TicketBase = 60000, Slots = 900; // tickets 60000..65399
+    // Each choppa owns a block of tickets: 0-5 pockets, 6-9 bench spots (ChoppaBenches). Tickets 60000..65529.
+    const int TicketBase = 60000, TicketsPerChoppa = 10, Slots = 553;
     public static int Slot(uint id) => (int)(id % Slots);
-    static ushort Ticket(uint id, int i) => (ushort)(TicketBase + Slot(id) * Count + i);
+    internal static ushort Ticket(uint id, int i) => (ushort)(TicketBase + Slot(id) * TicketsPerChoppa + i);
 
     // Copied from one of the game's backpack pockets the first time we need it.
     static bool templateSearched;
@@ -133,12 +134,11 @@ internal sealed class ChoppaPockets
     }
 
     // A ticket left behind by a destroyed choppa is fine to reuse; one the game uses is not.
-    static bool FreeTicket(TicketOffice office, ushort ticket)
+    internal static bool FreeTicket(TicketOffice office, ushort ticket)
     {
         if (office == null || !office.tickets.ContainsKey(ticket)) return true;
         var existing = office.tickets[ticket];
-        var home = existing?.TryCast<PropHome>();
-        if (existing != null && home != null) return false;
+        if (existing != null && (existing.TryCast<PropHome>() != null || existing.TryCast<PlayerPose>() != null)) return false;
         office.tickets.Remove(ticket);
         return true;
     }

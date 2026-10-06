@@ -43,8 +43,10 @@ internal static class LittleBirdModel
 {
     const string Resource = "BigChoppa.mh6.bin";
 
-    // Seat 0 is the pilot. Exits share the suffix.
-    public static readonly string[] SeatNames = { "Pilot", "Copilot", "BenchL_Front", "BenchL_Rear", "BenchR_Front", "BenchR_Rear" };
+    // Mod seats (G to get in); seat 0 is the pilot. Exits share the suffix.
+    public static readonly string[] SeatNames = { "Pilot", "Copilot" };
+    // The outside benches are the game's own seats instead (ChoppaBenches): aim and use, like a chairlift.
+    public static readonly string[] BenchNames = { "BenchL_Front", "BenchL_Rear", "BenchR_Front", "BenchR_Rear" };
 
     public static void Build(Helicopter heli, float scale)
     {
@@ -76,6 +78,7 @@ internal static class LittleBirdModel
 
         heli.Lights = ChoppaLights.Build(model, heli.Id, scale, Lights(data));
         heli.Pockets = ChoppaPockets.Build(model, heli, Pockets(data));
+        heli.Benches = ChoppaBenches.Build(model, heli, BenchNames.Select(s => Need("Seat_" + s)).ToArray());
     }
 
     // Col_* empties are boxes whose scale is the half extents; "capsule" ones run along their longest side.
