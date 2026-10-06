@@ -16,7 +16,7 @@ internal static class ChoppaConfig
     public static ConfigEntry<float> MouseSensitivity, FreelookMouseSensitivity;
     public static ConfigEntry<bool> InvertPitch, InvertRoll;
     public static ConfigEntry<InputBackend> Backend;
-    public static ConfigEntry<bool> RequireCursorLock, FlyIn;
+    public static ConfigEntry<bool> RequireCursorLock;
 
     // Flight
     public static ConfigEntry<float> MaxLiftG, CollectiveRate, MaxPitchRollRate, YawRate, ControlResponse;
@@ -34,7 +34,6 @@ internal static class ChoppaConfig
     public static ConfigEntry<float> ChaseDistance, ChaseHeight, CockpitEyeHeight;
     public static ConfigEntry<bool> SitWhileFlying;
     public static ConfigEntry<int> ChoppaLayer;
-    public static ConfigEntry<Vehicle> VehicleChoice;
 
     // Lights
     public static ConfigEntry<float> HeadlightIntensity, HeadlightRange, HeadlightAngle, HeadlightTilt, GlowIntensity;
@@ -67,8 +66,7 @@ internal static class ChoppaConfig
         CollectiveDownKey = cfg.Bind(c, "CollectiveDown", KeyCode.S, "Hold to lower collective (less lift).");
         PedalLeftKey = cfg.Bind(c, "PedalLeft", KeyCode.A, "Left anti-torque pedal (yaw left).");
         PedalRightKey = cfg.Bind(c, "PedalRight", KeyCode.D, "Right anti-torque pedal (yaw right).");
-        SpawnKey = cfg.Bind(c, "Spawn", KeyCode.F8, "Call in a choppa (replaces your previous one if nobody is in it).");
-        FlyIn = cfg.Bind(c, "FlyIn", true, "The choppa flies in from the distance and lands near you. Off = it appears right in front of you.");
+        SpawnKey = cfg.Bind(c, "Spawn", KeyCode.F8, "Open the choppa chooser: call one in or spawn it in front of you (replaces your previous one if nobody is in it).");
         EnterExitKey = cfg.Bind(c, "EnterExit", KeyCode.G, "Board or leave the choppa.");
         ResetKey = cfg.Bind(c, "ResetUpright", KeyCode.F9, "Flip the choppa back upright where it is.");
         CameraKey = cfg.Bind(c, "ToggleCamera", KeyCode.V, "Switch between chase and cockpit camera.");
@@ -109,7 +107,6 @@ internal static class ChoppaConfig
         CrashStunRadius = cfg.Bind(x, "StunRadius", 6f, "Your character gets knocked down if within this distance of a crash (pilot always is).");
 
         const string m = "Model";
-        VehicleChoice = cfg.Bind(m, "Vehicle", Vehicle.LittleBird, "Which choppa you call in: LittleBird (the MH-6) or Classic (the original spring-rider choppa). Applies to your next spawn; everyone in the lobby sees the one you picked.");
         HeliScale = cfg.Bind(m, "Scale", 0.6f, "Overall size of the choppa.");
         SeatHeightOffset = cfg.Bind(m, "SeatHeightOffset", 0.0f, "Raise/lower where you sit (metres, before Scale).");
         SeatForwardOffset = cfg.Bind(m, "SeatForwardOffset", 0.0f, "Move where you sit forward/back (metres, before Scale).");

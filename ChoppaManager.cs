@@ -55,10 +55,12 @@ public class ChoppaManager : MonoBehaviour
     Vector3 chaseVel;
     bool showHud;
     string lastHint;
+    ChoppaMenu menu;
 
     void Start()
     {
         showHud = ChoppaConfig.ShowHud.Value;
+        menu = new ChoppaMenu(RequestSpawn);
         Helicopter.Crashed += OnOwnCrash;
         ChoppaNet.ServerReceived = ChoppaServer.OnMessage;
         ChoppaNet.ClientReceived = OnClientMessage;
@@ -97,10 +99,21 @@ public class ChoppaManager : MonoBehaviour
         if (Time.unscaledTime >= nextPlayerScan) ScanPlayers();
         TrackBench();
 
-        bool inputAllowed = !ChoppaConfig.RequireCursorLock.Value || Cursor.lockState == CursorLockMode.Locked;
+        if (menu.IsOpen)
+        {
+            if (seated || ChoppaInput.Pressed(ChoppaConfig.SpawnKey.Value)) menu.Close();
+            else menu.Tick();
+        }
+        else if (!seated && ChoppaInput.Pressed(ChoppaConfig.SpawnKey.Value)
+                 && (!ChoppaConfig.RequireCursorLock.Value || Cursor.lockState == CursorLockMode.Locked))
+        {
+            if (!ChoppaNet.Ready) Hint("Waiting for the host's Big Choppa to answer (does the host have the mod?).");
+            else menu.Open();
+        }
+
+        bool inputAllowed = !menu.IsOpen && (!ChoppaConfig.RequireCursorLock.Value || Cursor.lockState == CursorLockMode.Locked);
 
         if (inputAllowed && ChoppaInput.Pressed(ChoppaConfig.HudKey.Value)) showHud = !showHud;
-        if (inputAllowed && ChoppaInput.Pressed(ChoppaConfig.SpawnKey.Value) && !seated) RequestSpawn();
         if (inputAllowed && ChoppaInput.Pressed(ChoppaConfig.ResetKey.Value)) ResetMine();
         if (inputAllowed && ChoppaInput.Pressed(ChoppaConfig.EnterExitKey.Value))
         {
@@ -408,17 +421,15 @@ public class ChoppaManager : MonoBehaviour
 
     // ---------- spawn / board ----------
 
-    void RequestSpawn()
+    void RequestSpawn(Vehicle vehicle, bool flyIn)
     {
         if (!ChoppaNet.Ready) { Hint("Waiting for the host's Big Choppa to answer (does the host have the mod?)."); return; }
 
         var root = local.transform;
         var fwd = Vector3.ProjectOnPlane(root.forward, Vector3.up).normalized;
         if (fwd.sqrMagnitude < 0.01f) fwd = Vector3.forward;
-        var vehicle = ChoppaConfig.VehicleChoice.Value;
         float s = Vehicles.Scale(vehicle);
 
-        bool flyIn = ChoppaConfig.FlyIn.Value;
         Vector3 pos;
         Collider ground;
         if (flyIn)
@@ -648,7 +659,7 @@ public class ChoppaManager : MonoBehaviour
         var h = NearestBoardable(out float dist);
         if (h == null) { Hint($"Too far from a choppa ({dist:0.0}m away)."); return; }
         int seat = FreeSeat(h);
-        if (seat < 0) { Hint("That choppa is full."); return; }
+        if (seat < 0) { Hint(FullMessage(h)); return; }
 
         pendingBoardId = h.Id;
         pendingBoardUntil = Time.time + 3f;
@@ -656,6 +667,9 @@ public class ChoppaManager : MonoBehaviour
         uint id = h.Id;
         ChoppaNet.ToServer(ChoppaNet.Write(Msg.Board, w => { w.Write(id); w.Write(s); }), true);
     }
+
+    static string FullMessage(Helicopter h) =>
+        h.Benches != null && h.Benches.FreeSpots > 0 ? "Cockpit's full - hop on a bench spot outside instead." : "That choppa is full.";
 
     void Seat(Helicopter h, int index)
     {
@@ -1146,6 +1160,7 @@ public class ChoppaManager : MonoBehaviour
 
     void OnGUI()
     {
+        menu?.Draw();
         if (!showHud) return;
         try
         {
@@ -1156,7 +1171,7 @@ public class ChoppaManager : MonoBehaviour
                 if (h != null)
                 {
                     int seat = FreeSeat(h);
-                    string what = seat < 0 ? "Choppa full" : seat == 0 ? $"[{ChoppaConfig.EnterExitKey.Value}] Fly choppa" : $"[{ChoppaConfig.EnterExitKey.Value}] Ride with {NameOf(h.Occupants[0])}";
+                    string what = seat < 0 ? FullMessage(h) : seat == 0 ? $"[{ChoppaConfig.EnterExitKey.Value}] Fly choppa" : $"[{ChoppaConfig.EnterExitKey.Value}] Ride with {NameOf(h.Occupants[0])}";
                     GUI.Label(new Rect(Screen.width / 2f - 150f, Screen.height * 0.65f, 300f, 24f), what);
                 }
             }

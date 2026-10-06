@@ -13,7 +13,7 @@ Major version: new seat layout (6 seats) and protocol bump, so mixed lobbies wit
   mod seats are just pilot + co-pilot. Classic unchanged.
 - Next: in-game test of the bench spots (template choice, bum height/facing, sync, riding while flying, crash);
 - Next: in-game test (looks, winding/normals, glass, seats/exits, pockets, lights, colliders/landing, crash),
-  then tuning. Later: F8 hold-to-pick UI. Release: version bump to 3.0.0, new icon/screenshots.
+  then tuning. F8 chooser done (Call In / Spawn per vehicle; `[Controls] FlyIn` removed). Release: version bump to 3.0.0, new icon/screenshots.
 
 ## Model conventions (mh6.blend)
 
@@ -70,11 +70,10 @@ The primitive choppa stays as an option.
   instead of hard-coded positions.
 - The design is per choppa, not per PC: the Spawn message carries a design id so every peer builds the same
   vehicle, and the host sizes seat arrays from it (Classic 3, Little Bird 6). Protocol bump.
-- Step 1: config `[Choppa] Vehicle = LittleBird | Classic`, used by F8. Default `LittleBird` for everyone,
+- Step 1 (superseded by step 2, key removed): config `[Choppa] Vehicle = LittleBird | Classic`, used by F8. Default `LittleBird` for everyone,
   existing players included (owner's call, 2026-10-05). New key, so no migration needed. CHANGELOG line:
   "`[Choppa] Vehicle` (new, default `LittleBird`): set `Classic` to keep flying the original choppa."
-- Step 2 (later): a small picker when you press F8 (e.g. tap F8 = last used, hold F8 = choose), remembering
-  the choice in the config.
+- Step 2 (done): F8 opens a chooser (`ChoppaMenu.cs`) listing `Vehicles.Catalog`, each with Call In / Spawn.
 - Logbook: add a `vehicle` property to `choppa_spawned` / `flight_ended` and list it in `thunderstore/README.md`.
 
 ## Parity audit vs the classic choppa

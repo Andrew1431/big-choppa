@@ -33,7 +33,7 @@ This installs `BigChoppa.dll` to `BepInEx\plugins\BigChoppa`. The old `BepInEx\p
 
 | Key | Action |
 | --- | --- |
-| F8 | Call in your choppa: it flies in and lands nearby (`[Controls] FlyIn = false` spawns it in front of you) |
+| F8 | Choppa chooser: pick a vehicle, then Call In (flies in and lands nearby) or Spawn (appears in front of you) |
 | G | Board / leave (within ~5 m) |
 | W / S | Collective up / down (springs back to hover when released, or to idle on the ground) |
 | A / D | Pedals: yaw left / right |

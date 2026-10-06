@@ -8,8 +8,20 @@ namespace BigChoppa;
 // Which airframe a choppa is. Sent in the Spawn message so every PC builds the same one; never reorder (wire value).
 public enum Vehicle : byte { Classic = 0, LittleBird = 1 }
 
+// What the F8 chooser shows. Add a vehicle here (in the order it should be listed) and it gets its own card.
+internal sealed record VehicleInfo(Vehicle Vehicle, string Name, string Seats, string Description);
+
 internal static class Vehicles
 {
+    public static readonly VehicleInfo[] Catalog =
+    {
+        new(Vehicle.LittleBird, "Little Bird", "Seats 6: pilot and co-pilot up front, 4 on the outside benches",
+            "A toy MH-6 with see-through windows and saddlebag pockets on the tail. Press G to fly or ride up front; " +
+            "aim at a bench spot and use it to hop on outside, even when nobody's flying."),
+        new(Vehicle.Classic, "Classic", "Seats 3: pilot plus two on the bench",
+            "The original Big Choppa: a spring-rider toy built from blocks and balls. Everyone gets in with G."),
+    };
+
     public static Vehicle Parse(byte b) => Enum.IsDefined(typeof(Vehicle), b) ? (Vehicle)b : Vehicle.Classic;
 
     public static int SeatCount(Vehicle v) => v == Vehicle.LittleBird ? LittleBirdModel.SeatNames.Length : 3;

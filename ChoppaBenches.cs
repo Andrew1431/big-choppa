@@ -35,6 +35,16 @@ internal sealed class ChoppaBenches
         }
     }
 
+    public int FreeSpots
+    {
+        get
+        {
+            int n = 0;
+            foreach (var p in poses) if (p != null && p.occupant == null) n++;
+            return n;
+        }
+    }
+
     public bool Owns(PlayerPose pose)
     {
         if (pose == null) return false;

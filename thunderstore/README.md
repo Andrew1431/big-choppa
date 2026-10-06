@@ -13,8 +13,8 @@ A goofy, playground-style toy helicopter for Big Walk, flown with collective, pe
 
 The choppa is a toy Little Bird: pilot and co-pilot up front (press G to get in), plus two spots on each outside
 bench that work like the chairlift seats: aim at one and use it to sit, choppa running or not.
-Miss the original spring-rider choppa (pilot plus a two-person bench)? Set `[Model] Vehicle = Classic` and that's
-the one you'll call in. Everyone in the lobby sees the same choppas, whichever ones people picked.
+Miss the original spring-rider choppa (pilot plus a two-person bench)? Pick Classic in the F8 chooser.
+Everyone in the lobby sees the same choppas, whichever ones people picked.
 
 **Everyone in the lobby needs the mod, including the host.**
 
@@ -26,7 +26,7 @@ Pocketed items count as held: if you quit with something in a pocket, you'll fin
 
 | Key | Action |
 | --- | --- |
-| F8 | Call in a choppa: it flies in and lands near you (replaces your old one if it's empty) |
+| F8 | Choose a choppa, then Call In (it flies in and lands near you) or Spawn (it appears in front of you). Replaces your old one if it's empty |
 | G | Get in / get out. Takes the pilot seat if it's free, otherwise a passenger seat |
 | W / S | Collective up / down. Springs back to hover when released, or to idle on the ground |
 | A / D | Pedals: turn left / right |
@@ -48,7 +48,7 @@ Pocketed items count as held: if you quit with something in a pocket, you'll fin
 Every key and tuning value is in `BepInEx/config/com.andrew1431.bigchoppa.cfg`. With r2modman or Gale you can edit it from the mod manager's config editor. The file appears after you've launched the game once with the mod.
 
 Highlights:
-- Choppa: `Vehicle` (`LittleBird` or `Classic`), `Scale`
+- Choppa: `Scale`
 - Controls: `MouseSensitivity`, `FreelookMouseSensitivity`, `InvertPitch`, `InvertRoll`, every key
 - Flight: `AutoLevel`, `ControlResponse`, `YawRate`, `MaxLiftG`, drag values
 - Lights: `HeadlightIntensity`, `HeadlightRange`, `HeadlightAngle`, `CabinGlow`

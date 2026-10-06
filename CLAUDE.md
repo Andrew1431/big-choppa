@@ -89,7 +89,9 @@ setup (second test PC, share credentials, undo steps) lives in `DEV-NOTES.local.
 - `Vehicles.cs`: `Vehicle` enum (Classic / LittleBird; wire value in the Spawn message, never reorder), per-vehicle
   seat count and scale (`[Model] Scale` × 1/0.6 for the Little Bird, which is modelled at real size), and
   `LittleBirdModel`, which builds the MH-6 from the embedded `Resources/mh6.bin` using its named empties.
-  `[Model] Vehicle` picks what F8 calls in; each choppa is built as its spawner chose, so mixed lobbies work.
+  `Vehicles.Catalog` lists what the F8 chooser (`ChoppaMenu.cs`, IMGUI Rects, game menu mode while open) offers,
+  each with Call In / Spawn; adding a vehicle there gives it a card. Each choppa is built as its spawner chose, so
+  mixed lobbies work. (`[Model] Vehicle` and `[Controls] FlyIn` were removed in 3.0.0.)
 - `MeshModel.cs`: reads `mh6.bin` and instantiates nodes/meshes. Source is `model/mh6.blend`; re-export after any
   model change with `model/export_mh6.py` (Blender: `blender --background model/mh6.blend --python
   model/export_mh6.py`, or run it in an open Blender). Conventions and empties: `model/PLAN-3.0.0.md`.
