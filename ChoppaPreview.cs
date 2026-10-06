@@ -78,25 +78,48 @@ internal sealed class ChoppaPreview
         cam.targetTexture = Texture;
         try { cam.cameraType = CameraType.Preview; } catch { }
 
+        cam.depth = -100f;
         Frame(0f);
-        Render(0f);
     }
 
-    // Spin around the model (deg) and redraw.
-    public void Render(float yaw)
+    // While live, the camera is enabled and URP renders it into the texture every frame (a manual Camera.Render
+    // draws nothing under URP in the game build). The model sits 30 km up, beyond every other camera's far plane.
+    public void SetLive(bool live)
     {
         if (cam == null || root == null || Texture == null) return;
         if (!Texture.IsCreated()) Texture.Create();
-        Place(yaw);
-        root.SetActive(true);
-        try { cam.Render(); }
-        catch (Exception e)
-        {
-            Plugin.L.LogWarning($"Choppa preview render failed: {e.Message}");
-            Failed = true;
-        }
-        root.SetActive(false); // nobody else should ever see it
+        root.SetActive(live);
+        cam.enabled = live;
     }
+
+    // Spin around the model (deg).
+    public void Turn(float yaw)
+    {
+        if (cam != null && root != null) Place(yaw);
+    }
+
+#if DEVBUILD
+    // Dev: how much of the texture actually got drawn (all transparent = the camera isn't rendering).
+    public void Diagnose(Vehicle v)
+    {
+        if (Texture == null) return;
+        var prev = RenderTexture.active;
+        try
+        {
+            RenderTexture.active = Texture;
+            var t = new Texture2D(Texture.width, Texture.height, TextureFormat.RGBA32, false);
+            t.ReadPixels(new Rect(0, 0, Texture.width, Texture.height), 0, 0);
+            t.Apply();
+            var px = t.GetPixels();
+            int solid = 0, coloured = 0;
+            foreach (var c in px) { if (c.a > 0.5f) solid++; if (c.r + c.g + c.b > 0.05f) coloured++; }
+            Plugin.L.LogInfo($"Preview (dev) {v}: {solid}/{px.Length} opaque, {coloured} coloured, cam enabled {cam?.enabled}, root active {root?.activeSelf}.");
+            UnityEngine.Object.Destroy(t);
+        }
+        catch (Exception e) { Plugin.L.LogWarning($"Preview (dev) diagnose: {e.Message}"); }
+        finally { RenderTexture.active = prev; }
+    }
+#endif
 
     void Place(float yaw)
     {

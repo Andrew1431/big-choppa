@@ -107,6 +107,10 @@ internal static class ChoppaUi
         return t;
     }
 
+    // Fully rounded ends for a pill `height` tall; a hair under half so the 9-slice corners never overlap (they'd
+    // smear a line through the middle).
+    public static float PillRadius(float height) => Mathf.Floor(height / 2f) - 2f;
+
     public static void Draw(Rect r, GUIStyle s) => GUI.Label(r, "", s);
 
     public static Rect Grow(Rect r, float by) => new(r.x - by, r.y - by, r.width + by * 2f, r.height + by * 2f);

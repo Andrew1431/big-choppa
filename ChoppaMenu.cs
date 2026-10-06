@@ -20,10 +20,13 @@ internal sealed class ChoppaMenu
     readonly Dictionary<Vehicle, ChoppaPreview> previews = new();
     readonly Dictionary<Vehicle, float> yaw = new(), hover = new();
     Vehicle? hovered;
+#if DEVBUILD
+    float diagnoseAt;
+#endif
 
     static readonly Color Ink = new(0.93f, 0.94f, 0.97f);
     static readonly Color Muted = new(0.62f, 0.65f, 0.74f);
-    static readonly Color Faint = new(0.42f, 0.45f, 0.54f);
+    static readonly Color Faint = new(0.52f, 0.55f, 0.64f);
     static readonly Color Gold = new(1.00f, 0.80f, 0.18f);
     static readonly Color Coral = new(1.00f, 0.42f, 0.36f);
     const int PreviewW = 768, PreviewH = 400;
@@ -52,12 +55,17 @@ internal sealed class ChoppaMenu
                 previews[v.Vehicle] = ChoppaPreview.Create(v.Vehicle, PreviewW, PreviewH);
                 yaw[v.Vehicle] = -25f;
             }
+        foreach (var p in previews.Values) p.SetLive(true);
+#if DEVBUILD
+        diagnoseAt = Time.unscaledTime + 1f;
+#endif
     }
 
     public void Close()
     {
         if (!IsOpen) return;
         IsOpen = false;
+        foreach (var p in previews.Values) p.SetLive(false);
         try { ControlsManager.SetMenuMode(false); } catch (Exception e) { Plugin.L.LogWarning($"Menu mode: {e.Message}"); }
         try { CursorManager.SetLocked(); }
         catch { Cursor.lockState = CursorLockMode.Locked; Cursor.visible = false; }
@@ -86,8 +94,15 @@ internal sealed class ChoppaMenu
             hover[v.Vehicle] = Mathf.MoveTowards(hover.TryGetValue(v.Vehicle, out var h) ? h : 0f, on ? 1f : 0f, dt * 6f);
             if (!previews.TryGetValue(v.Vehicle, out var p) || !p.Alive) continue;
             yaw[v.Vehicle] = (yaw.TryGetValue(v.Vehicle, out var y) ? y : 0f) + dt * Mathf.Lerp(9f, 55f, hover[v.Vehicle]);
-            p.Render(yaw[v.Vehicle]);
+            p.Turn(yaw[v.Vehicle]);
         }
+#if DEVBUILD
+        if (diagnoseAt > 0f && Time.unscaledTime > diagnoseAt)
+        {
+            diagnoseAt = 0f;
+            foreach (var kv in previews) kv.Value.Diagnose(kv.Key);
+        }
+#endif
     }
 
     static void FreeCursor()
@@ -169,17 +184,20 @@ internal sealed class ChoppaMenu
 
         // Cards (scroll when they don't fit; our own thin scrollbar instead of the default skin's).
         bool scrolls = listH > viewH + 0.5f;
-        float barW = scrolls ? 14f * k : 0f;
+        const float barW = 0f;
+        // The view reaches `m` past the cards on every side so hover glows and shadows aren't clipped.
+        float m = 30f * k;
         var view = new Rect(x, y, inner, viewH);
-        var content = new Rect(0f, 0f, inner - barW, listH);
-        if (scrolls) { cardW = (content.width - gap * (cols - 1)) / cols; }
-        scroll = GUI.BeginScrollView(view, scroll, content, false, false, GUIStyle.none, GUIStyle.none);
+        var clip = new Rect(x - m, y - m, inner + m * 2f, viewH + m * 2f);
+        var content = new Rect(0f, 0f, inner - barW + m * 2f, listH + m * 2f);
+        if (scrolls) { cardW = (inner - barW - gap * (cols - 1)) / cols; }
+        scroll = GUI.BeginScrollView(clip, scroll, content, false, false, GUIStyle.none, GUIStyle.none);
         Vector2 mouse = Event.current != null ? Event.current.mousePosition : new Vector2(-1f, -1f);
         Vehicle? over = null;
         for (int i = 0; i < list.Length; i++)
         {
-            var r = new Rect((i % cols) * (cardW + gap), (i / cols) * (cardH + gap), cardW, cardH);
-            if (r.Contains(mouse) && mouse.y >= scroll.y && mouse.y <= scroll.y + viewH) over = list[i].Vehicle;
+            var r = new Rect(m + (i % cols) * (cardW + gap), m + (i / cols) * (cardH + gap), cardW, cardH);
+            if (r.Contains(mouse) && mouse.y >= scroll.y + m && mouse.y <= scroll.y + m + viewH) over = list[i].Vehicle;
             float appear = ChoppaUi.Ease((t - 0.05f - i * 0.06f) / 0.3f);
             DrawCard(i, list[i], new Rect(r.x, r.y + (1f - appear) * 22f * k, r.width, r.height), stageH, fade * appear);
         }
@@ -188,11 +206,11 @@ internal sealed class ChoppaMenu
         if (Event.current == null || Event.current.type == EventType.Repaint) hovered = over;
         if (scrolls)
         {
-            var track = new Rect(view.xMax - 5f * k, view.y, 4f * k, viewH);
-            ChoppaUi.Draw(track, ChoppaUi.Box(2f * k, new Color(1f, 1f, 1f, 0.05f), new Color(1f, 1f, 1f, 0.05f)));
+            var track = new Rect(view.xMax + m * 0.35f, view.y, 4f * k, viewH); // in the margin, clear of the cards
+            ChoppaUi.Draw(track, ChoppaUi.Box(1f, new Color(1f, 1f, 1f, 0.05f), new Color(1f, 1f, 1f, 0.05f)));
             float thumbH = Mathf.Max(30f * k, viewH * viewH / listH);
             float thumbY = view.y + (viewH - thumbH) * Mathf.Clamp01(scroll.y / (listH - viewH));
-            ChoppaUi.Draw(new Rect(track.x, thumbY, track.width, thumbH), ChoppaUi.Box(2f * k, ChoppaUi.A(Gold, 0.7f), ChoppaUi.A(Gold, 0.5f)));
+            ChoppaUi.Draw(new Rect(track.x, thumbY, track.width, thumbH), ChoppaUi.Box(1f, ChoppaUi.A(Gold, 0.7f), ChoppaUi.A(Gold, 0.5f)));
         }
         y += viewH;
 
@@ -213,7 +231,7 @@ internal sealed class ChoppaMenu
             var size = statusText.CalcSize(new GUIContent(s));
             float pw = size.x + 40f * k, ph = 30f * k;
             var pill = new Rect(r.xMax - pw, r.y + 4f * k, pw, ph);
-            ChoppaUi.Draw(pill, ChoppaUi.Box(ph / 2f, new Color(1f, 1f, 1f, 0.05f), new Color(1f, 1f, 1f, 0.03f), new Color(1f, 1f, 1f, 0.10f), Mathf.Max(1f, k)));
+            ChoppaUi.Draw(pill, ChoppaUi.Box(ChoppaUi.PillRadius(ph), new Color(1f, 1f, 1f, 0.05f), new Color(1f, 1f, 1f, 0.03f), new Color(1f, 1f, 1f, 0.10f), Mathf.Max(1f, k)));
             float pulse = 0.55f + 0.45f * Mathf.Sin(Time.unscaledTime * 3f);
             var dot = new Rect(pill.x + 14f * k, pill.center.y - 4f * k, 8f * k, 8f * k);
             GUI.DrawTexture(ChoppaUi.Grow(dot, 6f * k), ChoppaUi.Radial(new Color(0.3f, 1f, 0.55f, 0.5f * pulse), new Color(0.3f, 1f, 0.55f, 0f)));
@@ -263,8 +281,8 @@ internal sealed class ChoppaMenu
             var label = v.Chips[c];
             float cw = chip.CalcSize(new GUIContent(label)).x + 22f * k, ch = 26f * k;
             var pill = new Rect(cx, y, cw, ch);
-            if (c == 0) ChoppaUi.Draw(pill, ChoppaUi.Box(ch / 2f, ChoppaUi.A(accent, 0.24f), ChoppaUi.A(accent, 0.16f), ChoppaUi.A(accent, 0.55f), Mathf.Max(1f, k)));
-            else ChoppaUi.Draw(pill, ChoppaUi.Box(ch / 2f, new Color(1f, 1f, 1f, 0.06f), new Color(1f, 1f, 1f, 0.04f), new Color(1f, 1f, 1f, 0.10f), Mathf.Max(1f, k)));
+            if (c == 0) ChoppaUi.Draw(pill, ChoppaUi.Box(ChoppaUi.PillRadius(ch), ChoppaUi.A(accent, 0.24f), ChoppaUi.A(accent, 0.16f), ChoppaUi.A(accent, 0.55f), Mathf.Max(1f, k)));
+            else ChoppaUi.Draw(pill, ChoppaUi.Box(ChoppaUi.PillRadius(ch), new Color(1f, 1f, 1f, 0.06f), new Color(1f, 1f, 1f, 0.04f), new Color(1f, 1f, 1f, 0.10f), Mathf.Max(1f, k)));
             chip.normal.textColor = c == 0 ? Color.Lerp(accent, Color.white, 0.35f) : Muted;
             GUI.Label(pill, label, chip);
             cx += cw + 8f * k;
@@ -323,8 +341,8 @@ internal sealed class ChoppaMenu
     {
         float pw = tag.CalcSize(new GUIContent(label)).x + 18f * k, ph = 22f * k;
         var r = new Rect(right - pw, y, pw, ph);
-        if (filled) ChoppaUi.Draw(r, ChoppaUi.Box(ph / 2f, Color.Lerp(c, Color.white, 0.2f), c, default, 0f, 0.25f));
-        else ChoppaUi.Draw(r, ChoppaUi.Box(ph / 2f, new Color(1f, 1f, 1f, 0.06f), new Color(1f, 1f, 1f, 0.03f), new Color(1f, 1f, 1f, 0.25f), Mathf.Max(1f, k)));
+        if (filled) ChoppaUi.Draw(r, ChoppaUi.Box(ChoppaUi.PillRadius(ph), Color.Lerp(c, Color.white, 0.2f), c, default, 0f, 0.25f));
+        else ChoppaUi.Draw(r, ChoppaUi.Box(ChoppaUi.PillRadius(ph), new Color(1f, 1f, 1f, 0.06f), new Color(1f, 1f, 1f, 0.03f), new Color(1f, 1f, 1f, 0.25f), Mathf.Max(1f, k)));
         tag.normal.textColor = filled ? ChoppaUi.TextOn(c) : Ink;
         GUI.Label(r, label, tag);
         return r.x;
@@ -374,7 +392,7 @@ internal sealed class ChoppaMenu
         x = Hint(x + 18f * k, y, "SHIFT + #", "Spawn");
         Hint(x + 18f * k, y, "ESC", "Close");
 
-        var close = new Rect(r.xMax - 130f * k, r.y + 14f * k, 130f * k, 38f * k);
+        var close = new Rect(r.xMax - 170f * k, r.y + 14f * k, 170f * k, 40f * k);
         if (SecondaryButton(close, "CLOSE", ChoppaConfig.SpawnKey.Value.ToString())) Close();
     }
 
