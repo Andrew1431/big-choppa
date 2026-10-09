@@ -88,6 +88,7 @@ public class ChoppaManager : MonoBehaviour
         DevTime.Tick();
 #endif
         ChoppaNet.Tick();
+        ChoppaBenches.TickDying();
         if (!FindLocalPlayer())
         {
             if (seated) ForceUnseat("local player disappeared");

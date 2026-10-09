@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using LobbyNetworking;
+using Mirror;
 using UnityEngine;
 
 namespace BigChoppa;
@@ -225,27 +226,73 @@ internal sealed class ChoppaBenches
         }
     }
 
-    // Before the choppa goes away: the local player hops off (everyone does their own), tickets are freed.
+    // Spots of destroyed choppas, kept alive until every PC has heard their riders left (see Release).
+    static readonly List<(PlayerPose pose, float at)> dying = new();
+    const float DyingSeconds = 3f;
+
+    // Before the choppa goes away. Riders must leave through the game's networked exit (poser.ExitPose alone is
+    // local, so other PCs kept them in a pose that was then destroyed and they went invisible), and the spots
+    // outlive the choppa for a moment so the exit can arrive while the pose still exists.
     public void Release(PlayerCharacter local)
     {
-        foreach (var pose in poses)
-        {
-            if (pose == null) continue;
-            try
-            {
-                if (local != null && pose.occupant != null && pose.occupant.Pointer == local.Pointer) local.poser.ExitPose(null);
-            }
-            catch (Exception e) { Plugin.L.LogWarning($"Leaving bench spot: {e.Message}"); }
-        }
         for (int i = 0; i < seen.Count; i++)
         {
             if (seen[i] != null) IgnoreCollisions(seen[i], false);
             seen[i] = null;
         }
-        var office = TicketOffice.instance;
         foreach (var pose in poses)
-            if (pose != null && office != null && office.tickets.ContainsKey(pose.ticket))
-                office.tickets.Remove(pose.ticket);
+        {
+            if (pose == null) continue;
+            try
+            {
+                var who = pose.occupant;
+                if (who != null && local != null && who.Pointer == local.Pointer)
+                {
+                    if (local.actions != null) local.actions.ActionExitPose();
+                    else local.poser.ExitPose(null);
+                }
+                else if (who != null && NetworkServer.active) who.playerNetworking?.ServerExitPoseAuto();
+            }
+            catch (Exception e) { Plugin.L.LogWarning($"Leaving bench spot: {e.Message}"); }
+            try
+            {
+                var go = pose.gameObject;
+                go.transform.SetParent(null, true);
+                var target = go.GetComponent<CastableTarget>();
+                if (target != null) UnityEngine.Object.Destroy(target);
+                var box = go.GetComponent<BoxCollider>();
+                if (box != null) box.enabled = false;
+                dying.Add((pose, Time.time + DyingSeconds));
+            }
+            catch (Exception e) { Plugin.L.LogWarning($"Detaching bench spot: {e.Message}"); }
+        }
+        poses.Clear();
+        seen.Clear();
+    }
+
+    // Every frame from ChoppaManager: anyone still on a dead spot is evicted locally, then the spot goes.
+    public static void TickDying()
+    {
+        if (dying.Count == 0) return;
+        var office = TicketOffice.instance;
+        for (int i = dying.Count - 1; i >= 0; i--)
+        {
+            var (pose, at) = dying[i];
+            if (pose != null && Time.time < at) continue;
+            dying.RemoveAt(i);
+            if (pose == null) continue;
+            try
+            {
+                if (pose.occupant != null)
+                {
+                    Plugin.L.LogWarning($"Bench spot {pose.ticket}: player {pose.occupant.netId} never left; evicting.");
+                    pose.Evict();
+                }
+            }
+            catch (Exception e) { Plugin.L.LogWarning($"Evicting bench rider: {e.Message}"); }
+            if (office != null && office.tickets.ContainsKey(pose.ticket)) office.tickets.Remove(pose.ticket);
+            UnityEngine.Object.Destroy(pose.gameObject);
+        }
     }
 
     // Big Walk's chairlift and train seats are PlayerPoses; copy the first one that looks like a seat.

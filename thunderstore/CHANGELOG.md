@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.0.2
+
+- Fixed players on the Little Bird's bench spots turning invisible for everyone else when their choppa
+  ended abruptly.
+
 ## 3.0.1
 
 - The F8 choppa chooser got a toy-box makeover: chunky outlined cards that perk up when you point at them, big
