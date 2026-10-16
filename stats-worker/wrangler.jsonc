@@ -5,6 +5,10 @@
   "compatibility_date": "2026-09-01",
   "workers_dev": true,
   "routes": [{ "pattern": "big-choppa.hartwigdev.ca", "custom_domain": true }],
+  // The cron refreshes stats from PostHog into KV; page loads only read KV, so a slow or failing PostHog
+  // never blocks the card (it keeps showing the last good numbers).
+  "triggers": { "crons": ["*/10 * * * *"] },
+  "kv_namespaces": [{ "binding": "STATS", "id": "8804c675460c4948906723d0703d69cf" }],
   "vars": {
     "POSTHOG_PROJECT_ID": "643292",
     "POSTHOG_HOST": "https://us.posthog.com"

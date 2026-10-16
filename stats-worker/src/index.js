@@ -1,9 +1,9 @@
 // Serves the Pilot's Logbook card (/card.svg) and raw totals (/stats.json) from PostHog.
-// PostHog is queried at most once per CACHE_SECONDS per Cloudflare location.
+// A cron refreshes the stats into KV; requests only read KV, so PostHog's speed or outages never reach the card.
 import { renderCard } from './card.js';
 
-const CACHE_SECONDS = 600;
-const CACHE_KEY = 'https://big-choppa-stats.internal/stats/v4';
+const CACHE_SECONDS = 300;
+const KV_KEY = 'stats/v4';
 
 // Most people aboard at once; older versions only logged the count at the end.
 const riders = `toInt(coalesce(properties.max_riders, properties.riders))`;
@@ -46,14 +46,14 @@ WHERE event = 'choppa_spawned'
 GROUP BY vehicle
 ORDER BY spawns DESC`;
 
-async function runQuery(env, query) {
+async function runQuery(env, name, query) {
   const res = await fetch(`${env.POSTHOG_HOST}/api/projects/${env.POSTHOG_PROJECT_ID}/query/`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${env.POSTHOG_PERSONAL_KEY}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ query: { kind: 'HogQLQuery', query } }),
-    signal: AbortSignal.timeout(15000),
+    signal: AbortSignal.timeout(30000),
   });
-  if (!res.ok) throw new Error(`PostHog ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  if (!res.ok) throw new Error(`PostHog ${name} query ${res.status}: ${(await res.text()).slice(0, 300)}`);
   return res.json();
 }
 
@@ -68,7 +68,10 @@ function lastSevenDays(results, now = new Date()) {
 
 async function queryPostHog(env) {
   if (!env.POSTHOG_PERSONAL_KEY) throw new Error('POSTHOG_PERSONAL_KEY secret is not set');
-  const [totals, daily, vehicles] = await Promise.all([runQuery(env, QUERY), runQuery(env, DAILY_QUERY), runQuery(env, VEHICLE_QUERY)]);
+  // One at a time: PostHog limits concurrent queries per project and answers 504 when overloaded.
+  const totals = await runQuery(env, 'totals', QUERY);
+  const daily = await runQuery(env, 'daily', DAILY_QUERY);
+  const vehicles = await runQuery(env, 'vehicle', VEHICLE_QUERY);
   const row = totals.results?.[0] ?? [];
   return {
     ...Object.fromEntries(totals.columns.map((c, i) => [c, Number(row[i]) || 0])),
@@ -77,15 +80,15 @@ async function queryPostHog(env) {
   };
 }
 
-async function getStats(env, ctx) {
-  const cache = caches.default;
-  const hit = await cache.match(CACHE_KEY);
-  if (hit) return hit.json();
+async function refreshStats(env) {
   const stats = { ...(await queryPostHog(env)), updated: new Date().toISOString() };
-  ctx.waitUntil(cache.put(CACHE_KEY, new Response(JSON.stringify(stats), {
-    headers: { 'Content-Type': 'application/json', 'Cache-Control': `max-age=${CACHE_SECONDS}` },
-  })));
+  await env.STATS.put(KV_KEY, JSON.stringify(stats));
   return stats;
+}
+
+// Last good stats from KV. Only queries PostHog inline if KV is empty (first deploy, before the cron has run).
+async function getStats(env) {
+  return (await env.STATS.get(KV_KEY, { type: 'json', cacheTtl: 60 })) ?? refreshStats(env);
 }
 
 export default {
@@ -93,7 +96,7 @@ export default {
     const { pathname } = new URL(request.url);
     let stats = null, error = null;
     if (pathname === '/card.svg' || pathname === '/stats.json') {
-      try { stats = await getStats(env, ctx); }
+      try { stats = await getStats(env); }
       catch (e) { error = e.message; console.error(error); }
     }
 
@@ -113,5 +116,9 @@ export default {
       });
     }
     return Response.redirect('https://thunderstore.io/c/big-walk/p/Andrew1431/BigChoppa/', 302);
+  },
+
+  async scheduled(controller, env, ctx) {
+    ctx.waitUntil(refreshStats(env));
   },
 };
