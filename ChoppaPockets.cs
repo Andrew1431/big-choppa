@@ -133,13 +133,39 @@ internal sealed class ChoppaPockets
         rebindUntil = Time.time + 15f;
     }
 
-    // A ticket left behind by a destroyed choppa is fine to reuse; one the game uses is not.
+    // The game hands out tickets in our range too (buttons, switches, homes...). Taking one of those away from the
+    // office kills that object for the rest of the session ("peck state is null"), so only a ticket whose holder is
+    // gone may be reused.
+    static bool Taken(TicketOffice office, ushort ticket)
+    {
+        if (office == null || !office.tickets.ContainsKey(ticket)) return false;
+        var existing = office.tickets[ticket];
+        if (existing == null) return false;
+        var c = existing.TryCast<Component>();
+        return c is null || c != null; // not a Unity object (assume it's live), or a live one
+    }
+
     internal static bool FreeTicket(TicketOffice office, ushort ticket)
     {
-        if (office == null || !office.tickets.ContainsKey(ticket)) return true;
+        if (Taken(office, ticket)) return false;
+        if (office != null && office.tickets.ContainsKey(ticket)) office.tickets.Remove(ticket);
+        return true;
+    }
+
+    // Removes a ticket only if it's still ours; the game may have registered something of its own there since.
+    internal static void ReturnTicket(TicketOffice office, ushort ticket, IntPtr mine)
+    {
+        if (office == null || !office.tickets.ContainsKey(ticket)) return;
         var existing = office.tickets[ticket];
-        if (existing != null && (existing.TryCast<PropHome>() != null || existing.TryCast<PlayerPose>() != null)) return false;
-        office.tickets.Remove(ticket);
+        if (existing == null || existing.Pointer == mine) office.tickets.Remove(ticket);
+    }
+
+    // Whether a choppa with this id would get its whole ticket block (pockets and bench spots) on this PC.
+    internal static bool BlockFree(uint id)
+    {
+        var office = TicketOffice.instance;
+        for (int i = 0; i < TicketsPerChoppa; i++)
+            if (Taken(office, Ticket(id, i))) return false;
         return true;
     }
 
@@ -219,8 +245,7 @@ internal sealed class ChoppaPockets
         }
         var office = TicketOffice.instance;
         foreach (var home in homes)
-            if (home != null && office != null && office.tickets.ContainsKey(home.ticket))
-                office.tickets.Remove(home.ticket);
+            if (home != null) ReturnTicket(office, home.ticket, home.Pointer);
     }
 
     // Pinned items are kinematic children of our moving body; if they touched the hull they'd shove it around.
@@ -244,10 +269,14 @@ internal sealed class ChoppaPockets
         try
         {
             var office = TicketOffice.instance;
-            int maxTicket = 0;
+            int maxTicket = 0, inOurRange = 0;
             if (office != null)
-                foreach (var kv in office.tickets) if (kv.Key < TicketBase && kv.Key > maxTicket) maxTicket = kv.Key;
-            Plugin.L.LogInfo($"Pockets: {office?.tickets.Count ?? -1} game tickets, highest {maxTicket} (ours start at {TicketBase}).");
+                foreach (var kv in office.tickets)
+                {
+                    if (kv.Key > maxTicket) maxTicket = kv.Key;
+                    if (kv.Key >= TicketBase) inOurRange++;
+                }
+            Plugin.L.LogInfo($"Pockets: {office?.tickets.Count ?? -1} tickets, highest {maxTicket}, {inOurRange} at or above our base {TicketBase}.");
 
             CastableTarget target = null;
             PropHome template = null;

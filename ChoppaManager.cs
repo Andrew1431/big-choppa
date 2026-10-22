@@ -482,9 +482,12 @@ public class ChoppaManager : MonoBehaviour
                 ChoppaNet.ToServer(ChoppaNet.Write(Msg.Despawn, w => w.Write(oldId)), true);
             }
 
+        // Pockets and bench spots need a ticket slot no other choppa has and none of the game's objects use.
         uint id;
+        int tries = 0;
         do id = (uint)UnityEngine.Random.Range(1, int.MaxValue) ^ ((uint)UnityEngine.Random.Range(0, 2) << 31);
-        while (id == 0 || helis.Keys.Any(k => ChoppaPockets.Slot(k) == ChoppaPockets.Slot(id))); // pockets need a free ticket slot
+        while (id == 0 || helis.Keys.Any(k => ChoppaPockets.Slot(k) == ChoppaPockets.Slot(id))
+               || (++tries < 500 && !ChoppaPockets.BlockFree(id)));
         pendingSpawnId = id;
         ChoppaNet.ToServer(ChoppaNet.Write(Msg.Spawn, w => { w.Write(id); w.Write(pos); w.Write(rot); w.Write((byte)vehicle); }), true);
     }

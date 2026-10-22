@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.0.3
+
+- Fixed spawning choppas sometimes breaking random things in the world (buttons, hold switches, receptacles)
+  until the lobby was restarted. Big thanks to u/BigSappari for reporting it and sending logs!
+
 ## 3.0.2
 
 - Fixed players on the Little Bird's bench spots turning invisible for everyone else when their choppa

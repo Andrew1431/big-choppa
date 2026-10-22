@@ -290,7 +290,7 @@ internal sealed class ChoppaBenches
                 }
             }
             catch (Exception e) { Plugin.L.LogWarning($"Evicting bench rider: {e.Message}"); }
-            if (office != null && office.tickets.ContainsKey(pose.ticket)) office.tickets.Remove(pose.ticket);
+            ChoppaPockets.ReturnTicket(office, pose.ticket, pose.Pointer);
             UnityEngine.Object.Destroy(pose.gameObject);
         }
     }
