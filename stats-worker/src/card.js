@@ -49,7 +49,8 @@ const tile = (i, value, label) => {
 
 // Flights per day for the last 7 days, in a white panel under the tiles. daily = [{ day: 'YYYY-MM-DD', flights }].
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const PANEL_Y = 356;
+const LEAP_Y = 356, LEAP_H = 64;
+const PANEL_Y = LEAP_Y + LEAP_H + 16;
 function chart(daily, error) {
   const x0 = 24, y0 = PANEL_Y, w = 480, h = 184;
   const base = 150, tall = 96, colW = (w - 32) / 7, barW = 40;
@@ -76,6 +77,37 @@ function chart(daily, error) {
     <rect width="${w}" height="6" rx="3" fill="${stripes[3]}"/>
     <text x="14" y="30" font-size="13" font-weight="700" fill="${soft}">flights per day · last 7 days</text>
     ${error || !days.length ? `<text x="${w / 2}" y="${base - 24}" text-anchor="middle" font-size="26" font-weight="800" fill="${ink}">—</text>` : bars}
+  </g>`;
+}
+
+// The highest anyone has ever jumped out of a choppa, and how fast it was going, as a full-width banner.
+function leap(s, error) {
+  const w = W - 48, has = !error && s.record_leap_m > 0;
+  const big = has ? `${num(s.record_leap_m)} m` : '—';
+  const line = has
+    ? `Someone bailed out ${num(s.record_leap_m)} m up${s.record_leap_kmh > 0 ? `, doing ${num(s.record_leap_kmh)} km/h` : ''}. No parachute.`
+    : 'Nobody has jumped yet.';
+  // A tiny falling figure, arms up.
+  const guy = `
+    <g transform="translate(${w - 54} 14)" stroke="${ink}" stroke-width="3" stroke-linecap="round" fill="none">
+      <circle cx="12" cy="8" r="6" fill="#ffd23f"/>
+      <line x1="12" y1="14" x2="12" y2="30"/>
+      <path d="M2 4 L12 18 L22 4"/>
+      <path d="M4 40 L12 30 L20 40"/>
+    </g>
+    <g stroke="${soft}" stroke-width="2" stroke-linecap="round" opacity="0.5">
+      <line x1="${w - 70}" y1="12" x2="${w - 70}" y2="26"/>
+      <line x1="${w - 20}" y1="8" x2="${w - 20}" y2="20"/>
+      <line x1="${w - 76}" y1="34" x2="${w - 76}" y2="46"/>
+    </g>`;
+  return `
+  <g transform="translate(24 ${LEAP_Y})">
+    <rect width="${w}" height="${LEAP_H}" rx="12" fill="#fff"/>
+    <rect width="${w}" height="6" rx="3" fill="${stripes[2]}"/>
+    <text x="14" y="30" font-size="13" font-weight="700" fill="${soft}">record leap</text>
+    <text x="14" y="54" font-size="22" font-weight="900" fill="${ink}">${esc(big)}</text>
+    <text x="150" y="46" font-size="15" font-weight="600" fill="${ink}">${esc(line)}</text>
+    ${guy}
   </g>`;
 }
 
@@ -201,6 +233,7 @@ export function renderCard(stats, { updated = new Date(), error = false } = {}) 
   <text x="383" y="41" font-size="13" font-weight="700" fill="#c0392b">LIVE</text>
   ${heli(650, 4)}
   ${tiles.map(([val, label], i) => tile(i, val, label)).join('')}
+  ${leap(s, error)}
   ${chart(s.daily, error)}
   ${crewPie([s.solo_flights, s.duo_flights, s.trio_flights].map(n => Number(n) || 0), error)}
   ${vehicles.svg}

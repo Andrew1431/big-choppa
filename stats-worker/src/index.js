@@ -3,7 +3,7 @@
 import { renderCard } from './card.js';
 
 const CACHE_SECONDS = 300;
-const KV_KEY = 'stats/v4';
+const KV_KEY = 'stats/v5';
 
 // Most people aboard at once; older versions only logged the count at the end.
 const riders = `toInt(coalesce(properties.max_riders, properties.riders))`;
@@ -19,6 +19,8 @@ SELECT
   sum(if(event = 'flight_ended', toFloat(properties.rolls), 0)) AS rolls,
   sum(if(event = 'flight_ended', toFloat(properties.loops), 0)) AS loops,
   countIf(event = 'jumped_out') AS jumped_out,
+  max(if(event = 'jumped_out', toFloat(properties.height_m), 0)) AS record_leap_m,
+  argMaxIf(toFloat(properties.speed_kmh), toFloat(properties.height_m), event = 'jumped_out') AS record_leap_kmh,
   countIf(event = 'flight_ended' AND properties.how = 'landed') AS landed,
   countIf(event = 'flight_ended' AND properties.how = 'ended abruptly') AS ended_abruptly,
   countIf(event = 'choppa_spawned') AS spawned,
