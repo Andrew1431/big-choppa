@@ -3,7 +3,7 @@
 import { renderCard } from './card.js';
 
 const CACHE_SECONDS = 300;
-const KV_KEY = 'stats/v5';
+const KV_KEY = 'stats/v6';
 
 // Most people aboard at once; older versions only logged the count at the end.
 const riders = `toInt(coalesce(properties.max_riders, properties.riders))`;
@@ -24,6 +24,10 @@ SELECT
   countIf(event = 'flight_ended' AND properties.how = 'landed') AS landed,
   countIf(event = 'flight_ended' AND properties.how = 'ended abruptly') AS ended_abruptly,
   countIf(event = 'choppa_spawned') AS spawned,
+  max(if(event = 'choppa_ended_abruptly', toFloat(properties.impact_kmh), 0)) AS hardest_crash_kmh,
+  countIf(event = 'flipped_upright') AS flipped_upright,
+  sumIf(toFloat(properties.cockpit_view_pct) * toFloat(properties.duration_s), event = 'flight_ended' AND properties.cockpit_view_pct IS NOT NULL)
+    / greatest(1, sumIf(toFloat(properties.duration_s), event = 'flight_ended' AND properties.cockpit_view_pct IS NOT NULL)) AS cockpit_view_pct,
   sum(if(event = 'flight_ended', toFloat(properties.upside_down_s), 0)) AS upside_down_s,
   countIf(event = 'pocket_used' AND properties.action = 'stowed') AS items_pocketed,
   sum(if(event = 'choppa_ended_abruptly', toFloat(properties.pocket_items), 0)) AS items_spilled,
@@ -31,7 +35,7 @@ SELECT
   countIf(event = 'flight_ended' AND ${riders} = 2) AS duo_flights,
   countIf(event = 'flight_ended' AND ${riders} >= 3) AS trio_flights
 FROM events
-WHERE event IN ('flight_ended', 'jumped_out', 'choppa_spawned', 'pocket_used', 'choppa_ended_abruptly')`;
+WHERE event IN ('flight_ended', 'jumped_out', 'choppa_spawned', 'pocket_used', 'choppa_ended_abruptly', 'flipped_upright')`;
 
 // Days are UTC to match the card's "updated … UTC" footer.
 const DAILY_QUERY = `
@@ -47,6 +51,15 @@ FROM events
 WHERE event = 'choppa_spawned'
 GROUP BY vehicle
 ORDER BY spawns DESC`;
+
+// What people stuff in their pockets most.
+const ITEM_QUERY = `
+SELECT toString(properties.item) AS item, count() AS n
+FROM events
+WHERE event = 'pocket_used' AND properties.action = 'stowed' AND properties.item != ''
+GROUP BY item
+ORDER BY n DESC
+LIMIT 3`;
 
 async function runQuery(env, name, query) {
   const res = await fetch(`${env.POSTHOG_HOST}/api/projects/${env.POSTHOG_PROJECT_ID}/query/`, {
@@ -74,11 +87,13 @@ async function queryPostHog(env) {
   const totals = await runQuery(env, 'totals', QUERY);
   const daily = await runQuery(env, 'daily', DAILY_QUERY);
   const vehicles = await runQuery(env, 'vehicle', VEHICLE_QUERY);
+  const items = await runQuery(env, 'item', ITEM_QUERY);
   const row = totals.results?.[0] ?? [];
   return {
     ...Object.fromEntries(totals.columns.map((c, i) => [c, Number(row[i]) || 0])),
     daily: lastSevenDays(daily.results),
     vehicles: (vehicles.results ?? []).map(([id, n]) => ({ id: String(id), spawns: Number(n) || 0 })),
+    top_items: (items.results ?? []).map(([item, n]) => ({ item: String(item), count: Number(n) || 0 })),
   };
 }
 

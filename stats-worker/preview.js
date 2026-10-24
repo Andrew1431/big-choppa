@@ -4,7 +4,8 @@ import { renderCard } from './src/card.js';
 
 writeFileSync('preview.svg', renderCard({
   flights: 1284, pilots: 213, distance_m: 482_300, air_s: 151_200, max_altitude_m: 812,
-  top_speed_kmh: 247, rolls: 3021, loops: 418, jumped_out: 977, record_leap_m: 1342, record_leap_kmh: 186, landed: 512, ended_abruptly: 655,
+  top_speed_kmh: 247, rolls: 3021, loops: 418, jumped_out: 977, record_leap_m: 1342, record_leap_kmh: 186, hardest_crash_kmh: 368, flipped_upright: 8063, cockpit_view_pct: 2.03,
+  top_items: [{ item: 'WalkieTalkieProp', count: 63 }], landed: 512, ended_abruptly: 655,
   upside_down_s: 9_420, items_pocketed: 2_310, items_spilled: 731, solo_flights: 802, duo_flights: 311, trio_flights: 171,
   vehicles: [{ id: 'classic', spawns: 1702 }, { id: 'little_bird', spawns: 644 }],
   daily: [42, 0, 31, 88, 120, 64, 17].map((flights, i) => ({

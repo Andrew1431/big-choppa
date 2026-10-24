@@ -35,6 +35,9 @@ const heli = (x, y) => `
     <line x1="64" y1="47" x2="66" y2="54"/>
   </g>`;
 
+// Value font size: 26, shrunk for long text (item names) so it stays inside the 148px of a tile.
+const fit = value => Math.max(14, Math.min(26, Math.floor(148 / (0.62 * String(value).length))));
+
 const tile = (i, value, label) => {
   const col = i % 4, row = Math.floor(i / 4);
   const x = 24 + col * 192, y = 80 + row * 92;
@@ -42,18 +45,18 @@ const tile = (i, value, label) => {
   <g transform="translate(${x} ${y})">
     <rect width="176" height="76" rx="12" fill="#fff"/>
     <rect width="176" height="6" rx="3" fill="${stripes[(i + row) % 4]}"/>
-    <text x="14" y="42" font-size="26" font-weight="800" fill="${ink}">${esc(value)}</text>
+    <text x="14" y="42" font-size="${fit(value)}" font-weight="800" fill="${ink}">${esc(value)}</text>
     <text x="14" y="63" font-size="13" font-weight="600" fill="${soft}">${esc(label)}</text>
   </g>`;
 };
 
 // Flights per day for the last 7 days, in a white panel under the tiles. daily = [{ day: 'YYYY-MM-DD', flights }].
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const LEAP_Y = 356, LEAP_H = 64;
+const LEAP_Y = 448, LEAP_H = 64;
 const PANEL_Y = LEAP_Y + LEAP_H + 16;
 function chart(daily, error) {
   const x0 = 24, y0 = PANEL_Y, w = 480, h = 184;
-  const base = 150, tall = 96, colW = (w - 32) / 7, barW = 40;
+  const base = 154, tall = 84, colW = (w - 32) / 7, barW = 40;
   const days = Array.isArray(daily) && daily.length ? daily : [];
   const max = Math.max(1, ...days.map(d => d.flights));
   const bars = days.map((d, i) => {
@@ -194,9 +197,16 @@ function vehicleBars(vehicles, error) {
   };
 }
 
+// Unity prop names to words: "WalkieTalkieProp" -> "Walkie Talkie".
+function itemName(raw) {
+  return String(raw).replace(/\(Clone\)/g, '').replace(/_?Prop$/i, '').replace(/[_-]+/g, ' ')
+    .replace(/([a-z])([A-Z])/g, '$1 $2').trim() || '?';
+}
+
 export function renderCard(stats, { updated = new Date(), error = false } = {}) {
   const s = stats ?? {};
   const v = (f, n) => (error || n == null ? '—' : f(n));
+  const top = !error && Array.isArray(s.top_items) ? s.top_items[0] : null;
   const tiles = [
     [v(num, s.flights), 'flights'],
     [v(num, s.pilots), 'pilots'],
@@ -210,6 +220,10 @@ export function renderCard(stats, { updated = new Date(), error = false } = {}) 
     [v(num, s.items_spilled), 'spilled from pockets'],
     [v(n => `${num(n)} km/h`, s.top_speed_kmh), 'top speed'],
     [v(duration, s.upside_down_s), 'spent upside down'],
+    [v(n => `${num(n)} km/h`, s.hardest_crash_kmh), 'hardest crash'],
+    [v(num, s.flipped_upright), 'flipped back upright'],
+    [v(n => `${Math.round(n)}%`, s.cockpit_view_pct), 'flown from the cockpit'],
+    top ? [itemName(top.item), `most pocketed · ${num(top.count)}×`] : ['—', 'most pocketed'],
   ];
   const vehicles = vehicleBars(s.vehicles, error);
   const H = VEH_Y + vehicles.h + 40;
